@@ -189,7 +189,7 @@ export default function VideoPlayer() {
         {/* Progress Bar */}
         <div
           ref={progressBarRef}
-          className={`absolute bottom-0 left-0 right-0 cursor-pointer transition-all duration-200 z-50 ${
+          className={`absolute -bottom-1 left-0 right-0 cursor-pointer transition-all duration-200 z-50 ${
             isHoveringProgress || isDragging ? "h-6" : "h-4"
           } bg-tranparent flex items-end`}
           onMouseEnter={() => setIsHoveringProgress(true)}
