@@ -1,17 +1,32 @@
+"use client";
 import BottomTabs from "./BottomTabs";
 import Feed from "./Feed";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import { useSelector } from "react-redux";
 
 export default function ModernTok() {
+  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
   return (
-    <div className="min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden pt-14">
+    <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden pt-14">
+      {/* Ambient overlay (YouTube-like). Uses a radial mask so background-color can transition smoothly */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          backgroundColor: ambientColor,
+          opacity: 0.4,
+          filter: "blur(60px)",
+        }}
+      />
       <TopBar />
-      <div className="flex">
+      <div className="relative z-10 flex">
         <Sidebar />
         <Feed />
       </div>
-      <BottomTabs />
+      <div className="relative z-10">
+        <BottomTabs />
+      </div>
     </div>
   );
 }
