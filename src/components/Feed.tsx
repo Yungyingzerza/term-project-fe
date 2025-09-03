@@ -205,8 +205,6 @@ export default function Feed() {
       const dy = touchStartY.current - y;
       const factor = 0.7;
       let nextOffset = dy * factor;
-      const th = getThreshold();
-      nextOffset = Math.max(-th, Math.min(th, nextOffset));
       setOffset(nextOffset);
     };
     const onTouchEnd = (e: TouchEvent) => {
