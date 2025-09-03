@@ -88,12 +88,9 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
       const v = videoRef.current;
       if (v) {
         try {
-          v.pause();
           v.currentTime = 0;
         } catch {}
       }
-      // Also mark internal playing state to false so button reflects paused
-      setPlaying(false);
     }
   }, [isActive]);
 

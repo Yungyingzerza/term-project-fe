@@ -248,8 +248,7 @@ export default function Feed() {
     setOffset(0);
   }, [index]);
 
-  const prevIdx = index > 0 ? index - 1 : 0;
-  const nextIdx = index < posts.length - 1 ? index + 1 : posts.length - 1;
+  // With full list rendering, we no longer need prev/next indices
 
   return (
     <main className="flex-1">
@@ -264,32 +263,19 @@ export default function Feed() {
             style={{
               transform:
                 containerH > 0
-                  ? `translateY(-${containerH + offset}px)`
-                  : `translateY(-100%)`,
+                  ? `translateY(-${index * containerH + offset}px)`
+                  : `translateY(0)`,
               transition: isAnimating ? `transform ${animMs}ms ease` : "none",
             }}
           >
-            <div style={{ height: containerH || "100%" }}>
-              <VideoCard
-                key={`prev-${posts[prevIdx].id}`}
-                post={posts[prevIdx]}
-                isActive={false}
-              />
-            </div>
-            <div style={{ height: containerH || "100%" }}>
-              <VideoCard
-                key={`curr-${posts[index].id}`}
-                post={posts[index]}
-                isActive={true}
-              />
-            </div>
-            <div style={{ height: containerH || "100%" }}>
-              <VideoCard
-                key={`next-${posts[nextIdx].id}`}
-                post={posts[nextIdx]}
-                isActive={false}
-              />
-            </div>
+            {posts.map((p, i) => (
+              <div
+                key={`${p.id}-${i}`}
+                style={{ height: containerH || "100%" }}
+              >
+                <VideoCard post={p} isActive={i === index} />
+              </div>
+            ))}
           </div>
         </div>
       </div>
