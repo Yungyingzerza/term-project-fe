@@ -1,13 +1,7 @@
-import VideoPlayer from "@/components/VideoPlayer";
+import ModernTok from "@/components/ModernTok";
 
 export default function Home() {
   return (
-    <>
-      <div className="h-[100svh] flex items-center justify-center">
-        <div className="h-[90svh] ">
-          <VideoPlayer />
-        </div>
-      </div>
-    </>
+    <ModernTok />
   );
 }
