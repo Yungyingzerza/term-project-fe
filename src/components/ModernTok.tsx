@@ -12,10 +12,10 @@ export default function ModernTok() {
       {/* Ambient overlay (YouTube-like). Uses a radial mask so background-color can transition smoothly */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0"
+        className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
         style={{
           backgroundColor: ambientColor,
-          opacity: 0.4,
+          opacity: 0.3,
           filter: "blur(60px)",
         }}
       />

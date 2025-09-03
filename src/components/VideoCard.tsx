@@ -142,7 +142,7 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
         g = Math.round(g / count);
         b = Math.round(b / count);
         // Slightly desaturate and darken for a subtle glow
-        const desat = 0.85; // 1 = original
+        const desat = 3; // 1 = original
         const avg = (r + g + b) / 3;
         r = Math.round(r * desat + avg * (1 - desat));
         g = Math.round(g * desat + avg * (1 - desat));
