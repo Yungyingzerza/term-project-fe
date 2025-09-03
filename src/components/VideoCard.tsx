@@ -13,16 +13,21 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
   const [playing, setPlaying] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const bgVideoRef = useRef<HTMLVideoElement | null>(null);
   const prevActiveRef = useRef<boolean>(isActive);
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     v.muted = muted;
+    // Background video stays muted regardless
+    const bg = bgVideoRef.current;
+    if (bg) bg.muted = true;
   }, [muted]);
 
   useEffect(() => {
     const v = videoRef.current;
+    const bg = bgVideoRef.current;
     if (!v) return;
     const shouldPlay = isActive && playing;
     if (shouldPlay) {
@@ -30,23 +35,46 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
       if (playPromise && typeof playPromise.catch === "function") {
         playPromise.catch(() => {});
       }
+      if (bg) {
+        const p2 = bg.play();
+        if (p2 && typeof p2.catch === "function") p2.catch(() => {});
+      }
     } else {
       v.pause();
+      if (bg) bg.pause();
     }
   }, [playing, isActive]);
 
   useEffect(() => {
     const v = videoRef.current;
+    const bg = bgVideoRef.current;
     if (!v) return;
+    const syncBgTime = () => {
+      const b = bgVideoRef.current;
+      if (!b || !v || !isFinite(v.currentTime)) return;
+      try {
+        if (Math.abs((b.currentTime || 0) - v.currentTime) > 0.2) {
+          b.currentTime = v.currentTime;
+        }
+      } catch {}
+    };
     const onTime = () => {
       const ratio = v.duration ? v.currentTime / v.duration : 0;
       setProgress(Math.max(0, Math.min(1, ratio)));
+      syncBgTime();
     };
+    const onSeeked = () => syncBgTime();
+    const onBgLoaded = () => syncBgTime();
+
     v.addEventListener("timeupdate", onTime);
     v.addEventListener("loadedmetadata", onTime);
+    v.addEventListener("seeked", onSeeked);
+    bg?.addEventListener("loadedmetadata", onBgLoaded);
     return () => {
       v.removeEventListener("timeupdate", onTime);
       v.removeEventListener("loadedmetadata", onTime);
+      v.removeEventListener("seeked", onSeeked);
+      bg?.removeEventListener("loadedmetadata", onBgLoaded);
     };
   }, []);
 
@@ -69,9 +97,20 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
 
   return (
     <article className="relative w-full h-full rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
+      {/* Blurred video background to avoid black bars while preserving aspect ratio */}
+      <video
+        ref={bgVideoRef}
+        className="absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none"
+        src={post.videoSrc}
+        playsInline
+        muted
+        loop
+        autoPlay={isActive && playing}
+        aria-hidden
+      />
       <video
         ref={videoRef}
-        className="object-cover w-full h-full"
+        className="relative z-10 object-contain w-full h-full"
         src={post.videoSrc}
         poster={post.thumbnail}
         loop
@@ -81,10 +120,10 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
         onClick={() => isActive && setPlaying((v) => !v)}
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 z-20 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-      <div className="absolute left-2 sm:left-4 bottom-20 sm:bottom-24 space-y-2 max-w-[80%]">
+      <div className="absolute left-2 sm:left-4 bottom-20 sm:bottom-24 space-y-2 max-w-[80%] z-30">
         <div className="flex items-center gap-2">
           <img
             src={post.user.avatar}
@@ -106,7 +145,7 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
         </p>
       </div>
 
-      <div className="absolute right-2 sm:right-4 top-2 sm:top-4 flex items-center gap-2">
+      <div className="absolute right-2 sm:right-4 top-2 sm:top-4 flex items-center gap-2 z-30">
         <button
           onClick={() => dispatch(toggleMuted())}
           className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
@@ -140,7 +179,7 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
       />
       <MusicTicker text={post.music} />
 
-      <div className="absolute left-0 right-0 bottom-0 h-1.5 bg-white/10">
+      <div className="absolute left-0 right-0 bottom-0 h-1.5 bg-white/10 z-30">
         <div
           className="h-full bg-white/80"
           style={{ width: `${Math.round(progress * 100)}%` }}

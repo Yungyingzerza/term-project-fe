@@ -17,7 +17,7 @@ export default function ActionRail({ likes, comments, saves }: ActionRailProps) 
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   return (
-    <div className="absolute right-2 sm:right-4 bottom-24 sm:bottom-6 flex flex-col items-center gap-4">
+    <div className="absolute right-2 sm:right-4 bottom-24 sm:bottom-6 flex flex-col items-center gap-4 z-30">
       <button
         onClick={() => setLiked((v) => !v)}
         className={classNames(
@@ -51,4 +51,3 @@ export default function ActionRail({ likes, comments, saves }: ActionRailProps) 
     </div>
   );
 }
-

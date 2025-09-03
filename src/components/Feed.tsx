@@ -72,6 +72,23 @@ const SAMPLE_POSTS: PostItem[] = [
     tags: ["#city", "#timelapse", "#vibes"],
     videoSrc: "/Download (2).mp4",
   },
+  {
+    id: "p4",
+    user: {
+      handle: "@bear.vibes",
+      name: "Bear Vibes",
+      avatar: "https://i.pravatar.cc/100?img=45",
+    },
+    caption: "City night timelapse with chill beats 🌃",
+    music: "chillhop • late night",
+    likes: 1111,
+    comments: 333,
+    saves: 1234,
+    thumbnail:
+      "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=80&w=1600&auto=format&fit=crop",
+    tags: ["#example"],
+    videoSrc: "/mov_bbb.mp4",
+  },
 ];
 
 export default function Feed() {

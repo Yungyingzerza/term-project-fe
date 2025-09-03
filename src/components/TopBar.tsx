@@ -2,7 +2,7 @@ import { Plus, Search, Upload } from "lucide-react";
 
 export default function TopBar() {
   return (
-    <header className="sticky top-0 z-40 h-14 border-b border-white/10 bg-neutral-950/60 backdrop-blur-xl">
+    <header className="fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/10 bg-neutral-950/60 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center gap-3">
         <div className="flex items-center gap-2 font-extrabold text-lg">
           <div className="w-7 h-7 rounded-lg bg-white text-black grid place-items-center">TT</div>
@@ -31,4 +31,3 @@ export default function TopBar() {
     </header>
   );
 }
-

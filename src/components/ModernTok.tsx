@@ -5,7 +5,7 @@ import TopBar from "./TopBar";
 
 export default function ModernTok() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden">
+    <div className="min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden pt-14">
       <TopBar />
       <div className="flex">
         <Sidebar />
@@ -15,4 +15,3 @@ export default function ModernTok() {
     </div>
   );
 }
-
