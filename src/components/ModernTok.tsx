@@ -8,7 +8,7 @@ import { useSelector } from "react-redux";
 export default function ModernTok() {
   const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
   return (
-    <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden pt-14">
+    <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
       {/* Ambient overlay (YouTube-like). Uses a radial mask so background-color can transition smoothly */}
       <div
         aria-hidden

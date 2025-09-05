@@ -133,6 +133,55 @@ export default function Feed() {
   const [containerH, setContainerH] = useState<number>(0);
   const ignoreSwipeRef = useRef<boolean>(false);
 
+  // Robust mobile viewport handling: prefer 100dvh when supported, otherwise
+  // fall back to the real visible viewport height in pixels.
+  useEffect(() => {
+    const computeAppVh = () => {
+      if (typeof window === "undefined") return "100vh";
+      try {
+        if ((window as any).CSS?.supports?.("height: 100dvh")) {
+          return "100dvh";
+        }
+      } catch {}
+      const h = window.visualViewport?.height || window.innerHeight;
+      return `${Math.max(0, Math.round(h))}px`;
+    };
+
+    const apply = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      el.style.setProperty("--app-vh", computeAppVh());
+      // Also recalc container height so item sizing stays in sync
+      setContainerH(el.getBoundingClientRect().height || 0);
+    };
+
+    apply();
+    const onResize = () => apply();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    // visualViewport fires more accurate resize events on mobile browsers
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", onResize);
+    vv?.addEventListener("scroll", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+      vv?.removeEventListener("resize", onResize as EventListener);
+      vv?.removeEventListener("scroll", onResize as EventListener);
+    };
+  }, []);
+
+  // Recalculate container height when bottom tabs height changes
+  useEffect(() => {
+    const recalc = () => {
+      const el = containerRef.current;
+      if (!el) return;
+      setContainerH(el.getBoundingClientRect().height || 0);
+    };
+    window.addEventListener("bottom-tabs-height-change", recalc as EventListener);
+    return () => window.removeEventListener("bottom-tabs-height-change", recalc as EventListener);
+  }, []);
+
   const isInteractiveTarget = (target: EventTarget | null): boolean => {
     const el = target as HTMLElement | null;
     if (!el) return false;
@@ -157,14 +206,19 @@ export default function Feed() {
   };
 
   useLayoutEffect(() => {
-    const update = () => setContainerH(containerRef.current?.clientHeight || 0);
+    const update = () =>
+      setContainerH(
+        containerRef.current?.getBoundingClientRect().height || 0
+      );
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // Bottom tabs height is provided globally by BottomTabs via --bottom-tabs-h
+
   const getThreshold = () => {
-    const h = containerRef.current?.clientHeight || 600;
+    const h = containerRef.current?.getBoundingClientRect().height || 600;
     return Math.max(80, Math.min(240, Math.round(h * 0.25)));
   };
 
@@ -177,7 +231,7 @@ export default function Feed() {
         return;
       }
       setIsAnimating(true);
-      setOffset(dir * (containerRef.current?.clientHeight || containerH));
+      setOffset(dir * (containerH || containerRef.current?.getBoundingClientRect().height || 0));
       window.setTimeout(() => {
         setIndex(target);
         setOffset(0);
@@ -199,7 +253,7 @@ export default function Feed() {
         e.deltaMode === 1
           ? 16
           : e.deltaMode === 2
-          ? containerRef.current?.clientHeight || containerH || 1
+          ? containerH || containerRef.current?.getBoundingClientRect().height || 1
           : 1;
       const deltaPx = e.deltaY * unit;
 
@@ -236,7 +290,7 @@ export default function Feed() {
       const target = index + dir;
       if (target < 0 || target > posts.length - 1) return;
       setIsAnimating(true);
-      setOffset(dir * (containerRef.current?.clientHeight || containerH));
+      setOffset(dir * (containerH || containerRef.current?.getBoundingClientRect().height || 0));
       window.setTimeout(() => {
         setIndex(target);
         setOffset(0);
@@ -288,7 +342,7 @@ export default function Feed() {
         return;
       }
       setIsAnimating(true);
-      setOffset(dir * (containerRef.current?.clientHeight || containerH));
+      setOffset(dir * (containerH || containerRef.current?.getBoundingClientRect().height || 0));
       window.setTimeout(() => {
         setIndex(target);
         setOffset(0);
@@ -316,7 +370,12 @@ export default function Feed() {
       <div
         ref={containerRef}
         tabIndex={0}
-        className="mx-auto w-full max-w-[700px] px-3 overflow-hidden h-[calc(100dvh-56px-56px-env(safe-area-inset-bottom))] md:h-[calc(100dvh-56px)]"
+        className="mx-auto w-full max-w-[700px] px-3 overflow-hidden overscroll-none [--feed-top:56px]"
+        style={{
+          // Visible viewport minus fixed top bar and bottom tabs/safe-area.
+          height:
+            "calc(var(--app-vh, 100dvh) - var(--feed-top, 56px) - var(--bottom-tabs-h, 0px))",
+        }}
       >
         <div className="relative w-full h-full overflow-hidden">
           <div
