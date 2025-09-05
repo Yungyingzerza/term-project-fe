@@ -91,7 +91,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
       {/* Ambient overlay to match ModernTok */}
       <div
         aria-hidden
@@ -105,7 +105,7 @@ export default function ProfilePage() {
 
       <TopBar />
 
-      <div className="relative z-10 flex">
+      <div className="relative z-10 flex flex-1">
         <Sidebar />
 
         <main className="flex-1">
