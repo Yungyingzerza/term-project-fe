@@ -11,6 +11,13 @@ export default function Sidebar() {
     { icon: Compass, label: "Explore" },
     { icon: Radio, label: "Live" },
   ];
+  const orgs = [
+    { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
+    { name: "Vercel", logo: "https://logo.clearbit.com/vercel.com" },
+    { name: "GitHub", logo: "https://logo.clearbit.com/github.com" },
+    { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
+    { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
+  ];
   return (
     <aside className="hidden md:flex md:w-64 shrink-0 border-r border-white/10 bg-neutral-950/40 backdrop-blur-xl">
       <div className="p-4 w-full">
@@ -23,7 +30,7 @@ export default function Sidebar() {
             <button
               key={label}
               className={classNames(
-                "w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition",
+                "cursor-pointer w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition",
                 active && "bg-white/10"
               )}
             >
@@ -33,26 +40,20 @@ export default function Sidebar() {
           ))}
         </nav>
         <div className="mt-6">
-          <p className="text-xs text-white/60 px-3 mb-2">Suggested accounts</p>
-          {[1, 2, 3, 4, 5].map((i) => (
+          <p className="text-xs text-white/60 px-3 mb-2">Your Organizations</p>
+          {orgs.map((org) => (
             <div
-              key={i}
-              className="flex items-center justify-between px-3 py-2 rounded-xl hover:bg-white/5 transition"
+              key={org.name}
+              className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
             >
-              <div className="flex items-center gap-3">
-                <img
-                  src={`https://i.pravatar.cc/60?img=${i + 20}`}
-                  alt="avatar"
-                  className="w-8 h-8 rounded-full"
-                />
-                <div className="leading-tight">
-                  <p className="text-sm font-semibold">@user{i}</p>
-                  <p className="text-xs text-white/60">Creator</p>
-                </div>
+              <img
+                src={org.logo}
+                alt={`${org.name} logo`}
+                className="w-8 h-8 rounded"
+              />
+              <div className="ml-3 leading-tight">
+                <p className="text-sm font-semibold">{org.name}</p>
               </div>
-              <button className="text-xs px-3 py-1 rounded-full bg-white text-black font-semibold hover:opacity-90">
-                Follow
-              </button>
             </div>
           ))}
         </div>
@@ -60,4 +61,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-
