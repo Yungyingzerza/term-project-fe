@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { setAmbientColor } from "@/store/playerSlice";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 function classNames(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(" ");
@@ -19,9 +19,10 @@ function classNames(...arr: Array<string | false | null | undefined>) {
 export default function Sidebar() {
   const navigate = useRouter();
   const dispatch = useDispatch();
+  const pathname = usePathname();
 
   const items = [
-    { icon: Home, label: "For You", link: "/", active: true },
+    { icon: Home, label: "For You", link: "/" },
     { icon: Users, label: "Following", link: "/following" },
     { icon: Radio, label: "Live", link: "/live" },
     { icon: Compass, label: "Explore", link: "/explore" },
@@ -52,19 +53,24 @@ export default function Sidebar() {
           <span className="font-semibold">Discover</span>
         </div>
         <nav className="mt-4 space-y-1">
-          {items.map(({ icon: Icon, label, link, active }) => (
+          {items.map(({ icon: Icon, label, link }) => {
+            const isActive =
+              link === "/"
+                ? pathname === "/"
+                : pathname === link || pathname.startsWith(link + "/");
+            return (
             <button
               key={label}
               onClick={() => handleNavigation(link)}
               className={classNames(
                 "cursor-pointer w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition",
-                active && "bg-white/10"
+                isActive && "bg-white/10"
               )}
             >
               <Icon className="w-5 h-5" />
               <span className="text-sm font-medium">{label}</span>
             </button>
-          ))}
+          );})}
         </nav>
         <div className="mt-6">
           <p className="text-xs text-white/60 px-3 mb-2">Your Organizations</p>

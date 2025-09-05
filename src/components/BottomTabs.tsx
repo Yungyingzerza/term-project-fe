@@ -3,7 +3,7 @@ import { User, Compass, Home, Plus, MessageCircle } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setAmbientColor } from "@/store/playerSlice";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 function classNames(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(" ");
@@ -12,13 +12,14 @@ function classNames(...arr: Array<string | false | null | undefined>) {
 export default function BottomTabs() {
   const navigate = useRouter();
   const dispatch = useDispatch();
+  const pathname = usePathname();
   const navRef = useRef<HTMLElement | null>(null);
   const tabs = [
-    { icon: Home, label: "Home", active: true },
-    { icon: Compass, label: "Explore" },
-    { icon: Plus, label: "Create" },
-    { icon: MessageCircle, label: "Messages" },
-    { icon: User, label: "Profile" },
+    { icon: Home, label: "Home", link: "/" },
+    { icon: Compass, label: "Explore", link: "/explore" },
+    { icon: Plus, label: "Create", link: "/upload" },
+    { icon: MessageCircle, label: "Messages", link: "/messages" },
+    { icon: User, label: "Profile", link: "/profile" },
   ];
   useEffect(() => {
     const applyHeight = () => {
@@ -56,14 +57,7 @@ export default function BottomTabs() {
     //reset ambient color on navigation
     dispatch(setAmbientColor("transparent"));
 
-    let newLink = link;
-    if (link === "/home") newLink = "/";
-    if (link === "/explore") newLink = "/explore";
-    if (link === "/create") newLink = "/upload";
-    if (link === "/messages") newLink = "/messages";
-    if (link === "/profile") newLink = "/profile";
-
-    navigate.push(newLink);
+    navigate.push(link);
   };
 
   return (
@@ -73,23 +67,28 @@ export default function BottomTabs() {
       className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-white/10 bg-neutral-950/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
     >
       <div className="flex justify-around items-center py-2">
-        {tabs.map(({ icon: Icon, label, active }) => (
+        {tabs.map(({ icon: Icon, label, link }) => {
+          const isActive =
+            link === "/"
+              ? pathname === "/" || pathname.startsWith("/following") || pathname.startsWith("/live")
+              : pathname === link || pathname.startsWith(link + "/");
+          return (
           <button
             key={label}
-            onClick={() => handleNavigation(`/${label.toLowerCase()}`)}
+            onClick={() => handleNavigation(link)}
             className="flex flex-col items-center gap-0.5 text-[11px]"
           >
-            <Icon className={classNames("w-5 h-5", active && "text-white")} />
+            <Icon className={classNames("w-5 h-5", isActive && "text-white")} />
             <span
               className={classNames(
                 "",
-                active ? "text-white" : "text-white/60"
+                isActive ? "text-white" : "text-white/60"
               )}
             >
               {label}
             </span>
           </button>
-        ))}
+        );})}
       </div>
     </nav>
   );
