@@ -52,16 +52,23 @@ export default function ActionRail({
   const longPressedRef = useRef<boolean>(false);
   const suppressClickRef = useRef<boolean>(false);
   const lastSelectAtRef = useRef<number>(0);
-  const isTouchRef = useRef<boolean>(false);
+  // Detect if this device actually supports hover (mouse/trackpad). Many hybrid devices have touch
+  // AND mouse; prefer enabling hover when available.
+  const canHoverRef = useRef<boolean>(true);
 
   useEffect(() => {
     try {
-      isTouchRef.current =
+      const hasHover =
         typeof window !== "undefined" &&
-        ("ontouchstart" in window || navigator.maxTouchPoints > 0 ||
-          (window.matchMedia && window.matchMedia("(pointer: coarse)").matches));
+        !!(
+          (window.matchMedia && window.matchMedia("(any-hover: hover)").matches) ||
+          (window.matchMedia && window.matchMedia("(hover: hover)").matches) ||
+          (window.matchMedia && window.matchMedia("(any-pointer: fine)").matches) ||
+          (window.matchMedia && window.matchMedia("(pointer: fine)").matches)
+        );
+      canHoverRef.current = hasHover;
     } catch {
-      isTouchRef.current = false;
+      canHoverRef.current = true;
     }
   }, []);
   const total = (Object.keys(counts) as ReactionKey[]).reduce(
@@ -162,7 +169,7 @@ export default function ActionRail({
       <div
         className="relative"
         onMouseEnter={() => {
-          if (isTouchRef.current) return;
+          if (!canHoverRef.current) return;
           if (closeTimer.current) window.clearTimeout(closeTimer.current);
         }}
         onMouseLeave={() => {
@@ -258,7 +265,7 @@ export default function ActionRail({
               : `React • Click to Like • Hold to choose`
           }
           onMouseEnter={() => {
-            if (isTouchRef.current) return;
+            if (!canHoverRef.current) return;
             if (closeTimer.current) window.clearTimeout(closeTimer.current);
             setPickerOpen(true);
           }}
@@ -299,7 +306,7 @@ export default function ActionRail({
         {/* Reactions picker - shows on hover (desktop) or when long-pressed (mobile) */}
         <div
           onMouseEnter={() => {
-            if (isTouchRef.current) return;
+            if (!canHoverRef.current) return;
             if (closeTimer.current) window.clearTimeout(closeTimer.current);
             setPickerOpen(true);
           }}
