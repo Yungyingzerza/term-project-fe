@@ -1,6 +1,19 @@
 import { Search, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useDispatch } from "react-redux";
+import { setAmbientColor } from "@/store/playerSlice";
 
 export default function TopBar() {
+  const navigate = useRouter();
+  const dispatch = useDispatch();
+
+  //handle navigation
+  const handleNavigation = (link: string) => {
+    dispatch(setAmbientColor("transparent"));
+
+    navigate.push(link);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/10 bg-neutral-950/60 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center gap-3">
@@ -27,10 +40,16 @@ export default function TopBar() {
             <Upload className="w-4 h-4" /> Upload
           </button>
 
-          <img
-            src="https://i.pravatar.cc/80?img=5"
-            className="w-8 h-8 rounded-full"
-          />
+          <button
+            className="inline-block cursor-pointer"
+            onClick={() => handleNavigation("/profile")}
+          >
+            <img
+              src="https://i.pravatar.cc/80?img=5"
+              className="w-8 h-8 rounded-full"
+              alt="Profile"
+            />
+          </button>
         </div>
       </div>
     </header>

@@ -1,15 +1,22 @@
+"use client";
 import { Compass, Home, Radio, Sparkles, Users } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { setAmbientColor } from "@/store/playerSlice";
+import { useRouter } from "next/navigation";
 
 function classNames(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(" ");
 }
 
 export default function Sidebar() {
+  const navigate = useRouter();
+  const dispatch = useDispatch();
+
   const items = [
-    { icon: Home, label: "For You", active: true },
-    { icon: Users, label: "Following" },
-    { icon: Compass, label: "Explore" },
-    { icon: Radio, label: "Live" },
+    { icon: Home, label: "For You", link: "/", active: true },
+    { icon: Users, label: "Following", link: "/following" },
+    { icon: Compass, label: "Explore", link: "/explore" },
+    { icon: Radio, label: "Live", link: "/live" },
   ];
   const orgs = [
     { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
@@ -18,6 +25,15 @@ export default function Sidebar() {
     { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
     { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
   ];
+
+  //handle navigation
+  const handleNavigation = (link: string) => {
+    //reset ambient color on navigation
+    dispatch(setAmbientColor("transparent"));
+
+    navigate.push(link);
+  };
+
   return (
     <aside className="hidden md:flex md:w-64 shrink-0 border-r border-white/10 bg-neutral-950/40 backdrop-blur-xl">
       <div className="p-4 w-full">
@@ -26,9 +42,10 @@ export default function Sidebar() {
           <span className="font-semibold">Discover</span>
         </div>
         <nav className="mt-4 space-y-1">
-          {items.map(({ icon: Icon, label, active }) => (
+          {items.map(({ icon: Icon, label, link, active }) => (
             <button
               key={label}
+              onClick={() => handleNavigation(link)}
               className={classNames(
                 "cursor-pointer w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition",
                 active && "bg-white/10"
