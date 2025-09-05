@@ -1,5 +1,13 @@
 "use client";
-import { Compass, Home, Radio, Sparkles, Users, User } from "lucide-react";
+import {
+  Compass,
+  Home,
+  Radio,
+  Sparkles,
+  Users,
+  User,
+  MessageCircle,
+} from "lucide-react";
 import { useDispatch } from "react-redux";
 import { setAmbientColor } from "@/store/playerSlice";
 import { useRouter } from "next/navigation";
@@ -17,6 +25,7 @@ export default function Sidebar() {
     { icon: Users, label: "Following", link: "/following" },
     { icon: Compass, label: "Explore", link: "/explore" },
     { icon: Radio, label: "Live", link: "/live" },
+    { icon: MessageCircle, label: "Messages", link: "/messages" },
     { icon: User, label: "Profile", link: "/profile" },
   ];
   const orgs = [

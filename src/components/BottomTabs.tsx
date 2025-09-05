@@ -1,18 +1,24 @@
-import { Bookmark, Compass, Home, Plus, Users } from "lucide-react";
+"use client";
+import { User, Compass, Home, Plus, MessageCircle } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { useDispatch } from "react-redux";
+import { setAmbientColor } from "@/store/playerSlice";
+import { useRouter } from "next/navigation";
 
 function classNames(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(" ");
 }
 
 export default function BottomTabs() {
+  const navigate = useRouter();
+  const dispatch = useDispatch();
   const navRef = useRef<HTMLElement | null>(null);
   const tabs = [
     { icon: Home, label: "Home", active: true },
-    { icon: Compass, label: "Discover" },
+    { icon: Compass, label: "Explore" },
     { icon: Plus, label: "Create" },
-    { icon: Users, label: "Inbox" },
-    { icon: Bookmark, label: "Profile" },
+    { icon: MessageCircle, label: "Messages" },
+    { icon: User, label: "Profile" },
   ];
   useEffect(() => {
     const applyHeight = () => {
@@ -45,6 +51,21 @@ export default function BottomTabs() {
     };
   }, []);
 
+  //handle navigation
+  const handleNavigation = (link: string) => {
+    //reset ambient color on navigation
+    dispatch(setAmbientColor("transparent"));
+
+    let newLink = link;
+    if (link === "/home") newLink = "/";
+    if (link === "/explore") newLink = "/explore";
+    if (link === "/create") newLink = "/upload";
+    if (link === "/messages") newLink = "/messages";
+    if (link === "/profile") newLink = "/profile";
+
+    navigate.push(newLink);
+  };
+
   return (
     <nav
       ref={navRef as any}
@@ -53,9 +74,20 @@ export default function BottomTabs() {
     >
       <div className="flex justify-around items-center py-2">
         {tabs.map(({ icon: Icon, label, active }) => (
-          <button key={label} className="flex flex-col items-center gap-0.5 text-[11px]">
+          <button
+            key={label}
+            onClick={() => handleNavigation(`/${label.toLowerCase()}`)}
+            className="flex flex-col items-center gap-0.5 text-[11px]"
+          >
             <Icon className={classNames("w-5 h-5", active && "text-white")} />
-            <span className={classNames("", active ? "text-white" : "text-white/60")}>{label}</span>
+            <span
+              className={classNames(
+                "",
+                active ? "text-white" : "text-white/60"
+              )}
+            >
+              {label}
+            </span>
           </button>
         ))}
       </div>
