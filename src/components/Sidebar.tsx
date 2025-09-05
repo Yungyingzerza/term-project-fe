@@ -23,8 +23,8 @@ export default function Sidebar() {
   const items = [
     { icon: Home, label: "For You", link: "/", active: true },
     { icon: Users, label: "Following", link: "/following" },
-    { icon: Compass, label: "Explore", link: "/explore" },
     { icon: Radio, label: "Live", link: "/live" },
+    { icon: Compass, label: "Explore", link: "/explore" },
     { icon: MessageCircle, label: "Messages", link: "/messages" },
     { icon: User, label: "Profile", link: "/profile" },
   ];

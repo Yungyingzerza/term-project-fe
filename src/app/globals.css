@@ -15,3 +15,30 @@
     opacity: 0;
   }
 }
+
+/* Smooth, minimal scrollbars for dark UI */
+.scroll-smoothbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+  /* Avoid layout jump when scrollbars appear */
+  scrollbar-gutter: stable both-edges;
+}
+.scroll-smoothbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scroll-smoothbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-smoothbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.scroll-smoothbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+.scroll-smoothbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
