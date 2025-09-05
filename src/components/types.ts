@@ -9,7 +9,7 @@ export interface PostItem {
   user: UserMeta;
   caption: string;
   music: string;
-  likes: number;
+  interactions: Interactions;
   comments: number;
   saves: number;
   thumbnail: string;
@@ -17,8 +17,12 @@ export interface PostItem {
   videoSrc: string;
 }
 
+export type ReactionKey = "like" | "love" | "haha" | "sad" | "angry";
+
+export type Interactions = Record<ReactionKey, number>;
+
 export interface ActionRailProps {
-  likes: number;
+  interactions: Interactions;
   comments: number;
   saves: number;
 }

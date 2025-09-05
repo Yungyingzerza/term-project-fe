@@ -260,7 +260,7 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
       </div>
 
       <ActionRail
-        likes={post.likes}
+        interactions={post.interactions}
         comments={post.comments}
         saves={post.saves}
       />

@@ -13,7 +13,13 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     caption: "AI lights that sync with your mood ✨",
     music: "lofi • midnight drive",
-    likes: 12800,
+    interactions: {
+      like: 9800,
+      love: 1800,
+      haha: 400,
+      sad: 150,
+      angry: 150,
+    },
     comments: 632,
     saves: 940,
     thumbnail:
@@ -30,7 +36,13 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     caption: "10-min ramen hack that actually slaps 🍜",
     music: "city pop • summer night",
-    likes: 9876,
+    interactions: {
+      like: 7000,
+      love: 1800,
+      haha: 300,
+      sad: 150,
+      angry: 126,
+    },
     comments: 421,
     saves: 1205,
     thumbnail:
@@ -47,7 +59,13 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     caption: "5-min posture reset for desk goblins 🧘‍♀️",
     music: "ambient • sea breeze",
-    likes: 20340,
+    interactions: {
+      like: 15000,
+      love: 30000,
+      haha: 400,
+      sad: 240,
+      angry: 900,
+    },
     comments: 1170,
     saves: 3802,
     thumbnail:
@@ -64,7 +82,13 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     caption: "City night timelapse with chill beats 🌃",
     music: "chillhop • late night",
-    likes: 15234,
+    interactions: {
+      like: 11000,
+      love: 2600,
+      haha: 400,
+      sad: 234,
+      angry: 400,
+    },
     comments: 389,
     saves: 1287,
     thumbnail:
@@ -73,7 +97,7 @@ const SAMPLE_POSTS: PostItem[] = [
     videoSrc: "/Download (2).mp4",
   },
   {
-    id: "p4",
+    id: "p5",
     user: {
       handle: "@bear.vibes",
       name: "Bear Vibes",
@@ -81,7 +105,13 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     caption: "City night timelapse with chill beats 🌃",
     music: "chillhop • late night",
-    likes: 1111,
+    interactions: {
+      like: 800,
+      love: 150,
+      haha: 3000,
+      sad: 30,
+      angry: 31,
+    },
     comments: 333,
     saves: 1234,
     thumbnail:
