@@ -15,7 +15,7 @@ export default function ModernTok() {
         className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
         style={{
           backgroundColor: ambientColor,
-          opacity: 0.3,
+          opacity: 0.5,
           filter: "blur(60px)",
         }}
       />
