@@ -5,7 +5,7 @@ import { ActionRailProps, Interactions, ReactionKey } from "./types";
 import ReactionIcon from "./ReactionIcon";
 
 // UX timing constants (ms)
-const LONG_PRESS_DELAY_MS = 250; // time to press-and-hold before opening picker
+const LONG_PRESS_DELAY_MS = 500; // time to press-and-hold before opening picker
 const LONG_PRESS_COOLDOWN_MS = 400; // disable long-press shortly after a selection to avoid accidental reopen
 const PICKER_CLOSE_DELAY_MS = 120; // small hover-out delay to prevent flicker
 const BURST_ANIM_MS = 700; // single-run burst animation duration
@@ -52,6 +52,18 @@ export default function ActionRail({
   const longPressedRef = useRef<boolean>(false);
   const suppressClickRef = useRef<boolean>(false);
   const lastSelectAtRef = useRef<number>(0);
+  const isTouchRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    try {
+      isTouchRef.current =
+        typeof window !== "undefined" &&
+        ("ontouchstart" in window || navigator.maxTouchPoints > 0 ||
+          (window.matchMedia && window.matchMedia("(pointer: coarse)").matches));
+    } catch {
+      isTouchRef.current = false;
+    }
+  }, []);
   const total = (Object.keys(counts) as ReactionKey[]).reduce(
     (acc, k) => acc + (counts[k] || 0),
     0
@@ -150,6 +162,7 @@ export default function ActionRail({
       <div
         className="relative"
         onMouseEnter={() => {
+          if (isTouchRef.current) return;
           if (closeTimer.current) window.clearTimeout(closeTimer.current);
         }}
         onMouseLeave={() => {
@@ -245,6 +258,7 @@ export default function ActionRail({
               : `React • Click to Like • Hold to choose`
           }
           onMouseEnter={() => {
+            if (isTouchRef.current) return;
             if (closeTimer.current) window.clearTimeout(closeTimer.current);
             setPickerOpen(true);
           }}
@@ -285,6 +299,7 @@ export default function ActionRail({
         {/* Reactions picker - shows on hover (desktop) or when long-pressed (mobile) */}
         <div
           onMouseEnter={() => {
+            if (isTouchRef.current) return;
             if (closeTimer.current) window.clearTimeout(closeTimer.current);
             setPickerOpen(true);
           }}
