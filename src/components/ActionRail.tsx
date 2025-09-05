@@ -294,7 +294,7 @@ export default function ActionRail({
                 className="absolute -z-10 h-12 w-12 rounded-full opacity-40"
                 style={{
                   backgroundColor: burst.color,
-                  animation: `ping ${BURST_ANIM_MS}ms ease-out 1`,
+                  animation: `burst ${BURST_ANIM_MS}ms ease-out 1`,
                 }}
                 onAnimationEnd={() => setBurst(null)}
               />
@@ -303,8 +303,9 @@ export default function ActionRail({
             <span
               className={classNames(
                 "absolute -z-10 h-8 w-8 rounded-full blur-md transition-all",
-                reaction ? "opacity-60 scale-100" : "opacity-0 scale-90",
-                "group-hover:opacity-80 group-hover:scale-110"
+                reaction
+                  ? "opacity-60 scale-100 group-hover:opacity-80 group-hover:scale-110"
+                  : "opacity-0 scale-90"
               )}
               style={{
                 backgroundColor: REACTIONS.find(
