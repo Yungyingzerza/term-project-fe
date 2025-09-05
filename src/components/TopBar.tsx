@@ -1,11 +1,15 @@
+"use client";
 import { Search, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { setAmbientColor } from "@/store/playerSlice";
+import { useEffect, useRef, useState } from "react";
 
 export default function TopBar() {
   const navigate = useRouter();
   const dispatch = useDispatch();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   //handle navigation
   const handleNavigation = (link: string) => {
@@ -14,10 +18,32 @@ export default function TopBar() {
     navigate.push(link);
   };
 
+  // Close dropdown on outside click or Esc
+  useEffect(() => {
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (!menuRef.current) return;
+      if (!menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-40 h-14 border-b border-white/10 bg-neutral-950/60 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 h-full flex items-center gap-3">
-        <div className="flex items-center gap-2 font-extrabold text-lg">
+        <div
+          onClick={() => handleNavigation("/")}
+          className="cursor-pointer flex items-center gap-2 font-extrabold text-lg"
+        >
           <div className="w-7 h-7 rounded-lg bg-white text-black grid place-items-center">
             TT
           </div>
@@ -43,16 +69,49 @@ export default function TopBar() {
             <Upload className="w-4 h-4" /> Upload
           </button>
 
-          <button
-            className="inline-block cursor-pointer"
-            onClick={() => handleNavigation("/profile")}
-          >
-            <img
-              src="https://i.pravatar.cc/80?img=5"
-              className="w-8 h-8 rounded-full"
-              alt="Profile"
-            />
-          </button>
+          <div className="relative" ref={menuRef}>
+            <button
+              className="inline-block cursor-pointer"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((o) => !o)}
+            >
+              <img
+                src="https://i.pravatar.cc/80?img=5"
+                className="w-8 h-8 rounded-full"
+                alt="Profile menu"
+              />
+            </button>
+
+            {menuOpen ? (
+              <div
+                role="menu"
+                aria-orientation="vertical"
+                className="absolute right-0 mt-2 w-44 rounded-xl border border-white/10 bg-neutral-900/90 backdrop-blur-md shadow-xl py-1 z-50"
+              >
+                <button
+                  role="menuitem"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 focus:bg-white/10 cursor-pointer"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleNavigation("/profile");
+                  }}
+                >
+                  Profile
+                </button>
+                <button
+                  role="menuitem"
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 focus:bg-white/10 cursor-pointer"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleNavigation("/settings");
+                  }}
+                >
+                  Settings
+                </button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </header>

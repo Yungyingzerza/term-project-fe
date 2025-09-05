@@ -5,6 +5,7 @@ const initialState = {
   id: "",
   username: "",
   picture_url: "",
+  emails: [] as string[],
   isLoaded: false,
 };
 
@@ -21,8 +22,11 @@ export const userSlice = createSlice({
     setPictureUrl: (state, action) => {
       state.picture_url = action.payload;
     },
+    setEmails: (state, action) => {
+      state.emails = Array.isArray(action.payload) ? action.payload : [];
+    },
   },
 });
 
-export const { setId, setUsername, setPictureUrl } = userSlice.actions;
+export const { setId, setUsername, setPictureUrl, setEmails } = userSlice.actions;
 export default userSlice.reducer;

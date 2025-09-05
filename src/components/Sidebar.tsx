@@ -1,5 +1,5 @@
 "use client";
-import { Compass, Home, Radio, Sparkles, Users } from "lucide-react";
+import { Compass, Home, Radio, Sparkles, Users, User } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { setAmbientColor } from "@/store/playerSlice";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,7 @@ export default function Sidebar() {
     { icon: Users, label: "Following", link: "/following" },
     { icon: Compass, label: "Explore", link: "/explore" },
     { icon: Radio, label: "Live", link: "/live" },
+    { icon: User, label: "Profile", link: "/profile" },
   ];
   const orgs = [
     { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
