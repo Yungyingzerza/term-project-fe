@@ -36,7 +36,10 @@ export default function TopBar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button className="hidden cursor-pointer sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90">
+          <button
+            className="hidden cursor-pointer sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
+            onClick={() => handleNavigation("/upload")}
+          >
             <Upload className="w-4 h-4" /> Upload
           </button>
 
