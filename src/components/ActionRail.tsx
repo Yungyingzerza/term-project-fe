@@ -52,6 +52,8 @@ export default function ActionRail({
   const longPressedRef = useRef<boolean>(false);
   const suppressClickRef = useRef<boolean>(false);
   const lastSelectAtRef = useRef<number>(0);
+  const touchStartedOnMainRef = useRef<boolean>(false);
+  const movedOffMainRef = useRef<boolean>(false);
   // Detect if this device actually supports hover (mouse/trackpad). Many hybrid devices have touch
   // AND mouse; prefer enabling hover when available.
   const canHoverRef = useRef<boolean>(true);
@@ -179,6 +181,12 @@ export default function ActionRail({
             PICKER_CLOSE_DELAY_MS
           );
         }}
+        onTouchStart={(e) => {
+          // Record where the gesture started; used to avoid suppressing future taps
+          // when the user drags into the picker.
+          touchStartedOnMainRef.current = true;
+          movedOffMainRef.current = false;
+        }}
         onTouchMove={(e) => {
           if (!longPressedRef.current) return;
           const t = e.touches && e.touches[0];
@@ -195,6 +203,7 @@ export default function ActionRail({
             hoveredKeyRef.current = key;
             setHoveredKey(key);
           }
+          if (key) movedOffMainRef.current = true;
         }}
         onTouchEnd={(e) => {
           if (!longPressedRef.current) return;
@@ -209,7 +218,12 @@ export default function ActionRail({
           hoveredKeyRef.current = null;
           setHoveredKey(null);
           longPressedRef.current = false;
-          suppressClickRef.current = true;
+          // Suppress the synthetic click only if the long-press ended on the main button
+          // (no drag into the picker). If the user dragged to the picker to select,
+          // don't suppress the next tap on the main button.
+          suppressClickRef.current = touchStartedOnMainRef.current && !movedOffMainRef.current;
+          touchStartedOnMainRef.current = false;
+          movedOffMainRef.current = false;
         }}
         onTouchCancel={() => {
           if (!longPressedRef.current) return;
@@ -217,6 +231,8 @@ export default function ActionRail({
           setHoveredKey(null);
           longPressedRef.current = false;
           setPickerOpen(false);
+          touchStartedOnMainRef.current = false;
+          movedOffMainRef.current = false;
         }}
       >
         {/* Main reaction button */}

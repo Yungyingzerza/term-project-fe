@@ -131,6 +131,30 @@ export default function Feed() {
   const touchStartY = useRef<number | null>(null);
   const lastSnapAtRef = useRef<number>(0);
   const [containerH, setContainerH] = useState<number>(0);
+  const ignoreSwipeRef = useRef<boolean>(false);
+
+  const isInteractiveTarget = (target: EventTarget | null): boolean => {
+    const el = target as HTMLElement | null;
+    if (!el) return false;
+    // Ignore feed swipe gestures that start on obviously interactive UI
+    // including ActionRail controls and their picker.
+    return !!el.closest(
+      [
+        'button',
+        'a',
+        'input',
+        'select',
+        'textarea',
+        '[role="button"]',
+        '[role="radio"]',
+        '[role="radiogroup"]',
+        '[data-reaction]',
+        '[data-prevent-feed-swipe]',
+        '[aria-label="React"]',
+        '[aria-label="Reactions"]',
+      ].join(',')
+    );
+  };
 
   useLayoutEffect(() => {
     const update = () => setContainerH(containerRef.current?.clientHeight || 0);
@@ -226,9 +250,12 @@ export default function Feed() {
 
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
+      ignoreSwipeRef.current = isInteractiveTarget(e.target);
+      if (ignoreSwipeRef.current) return;
       touchStartY.current = e.touches[0]?.clientY ?? null;
     };
     const onTouchMove = (e: TouchEvent) => {
+      if (ignoreSwipeRef.current) return;
       if (touchStartY.current == null) return;
       e.preventDefault();
       const y = e.touches[0]?.clientY ?? touchStartY.current;
@@ -238,6 +265,12 @@ export default function Feed() {
       setOffset(nextOffset);
     };
     const onTouchEnd = (e: TouchEvent) => {
+      if (ignoreSwipeRef.current) {
+        // Reset and ignore this gesture for feed navigation
+        ignoreSwipeRef.current = false;
+        touchStartY.current = null;
+        return;
+      }
       if (touchStartY.current == null) return;
       const endY = e.changedTouches[0]?.clientY ?? touchStartY.current;
       const dy = touchStartY.current - endY;
