@@ -31,7 +31,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 940,
     thumbnail: "./Download (1).jpg",
     tags: ["#ai", "#setup", "#aesthetic"],
-    videoSrc: "http://localhost:8000/media/firstbucket/Download (1)",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/Download (1)",
   },
   {
     id: "p2",
@@ -53,7 +53,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 1205,
     thumbnail: "./Download (2).jpg",
     tags: ["#ramen", "#hack", "#homecooking"],
-    videoSrc: "http://localhost:8000/media/firstbucket/Download (2)",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/Download (2)",
   },
   {
     id: "p3",
@@ -75,7 +75,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 3802,
     thumbnail: "./Download.jpg",
     tags: ["#wellness", "#stretch", "#desk"],
-    videoSrc: "http://localhost:8000/media/firstbucket/Download",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/Download",
   },
   {
     id: "p4",
@@ -97,7 +97,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 1287,
     thumbnail: "./test.jpg",
     tags: ["#city", "#timelapse", "#vibes"],
-    videoSrc: "http://localhost:8000/media/firstbucket/test",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/test",
   },
   {
     id: "p5",
@@ -119,7 +119,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 1234,
     thumbnail: "./mov_bbb.jpg",
     tags: ["#example"],
-    videoSrc: "http://localhost:8000/media/firstbucket/mov_bbb",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/mov_bbb",
   },
 ];
 
