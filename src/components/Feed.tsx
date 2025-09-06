@@ -22,8 +22,7 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 632,
     saves: 940,
-    thumbnail:
-      "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop",
+    thumbnail: "./Download (2).jpg",
     tags: ["#ai", "#setup", "#aesthetic"],
     videoSrc: "http://localhost:8000/media/firstbucket/Download (2).mp4",
   },
@@ -45,8 +44,7 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 421,
     saves: 1205,
-    thumbnail:
-      "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?q=80&w=1600&auto=format&fit=crop",
+    thumbnail: "./Download.jpg",
     tags: ["#ramen", "#hack", "#homecooking"],
     videoSrc: "http://localhost:8000/media/firstbucket/Download.mp4",
   },
@@ -68,8 +66,7 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 1170,
     saves: 3802,
-    thumbnail:
-      "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?q=80&w=1600&auto=format&fit=crop",
+    thumbnail: "./Download (1).jpg",
     tags: ["#wellness", "#stretch", "#desk"],
     videoSrc: "http://localhost:8000/media/firstbucket/Download (1).mp4",
   },
@@ -91,8 +88,7 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 389,
     saves: 1287,
-    thumbnail:
-      "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=80&w=1600&auto=format&fit=crop",
+    thumbnail: "./test.jpg",
     tags: ["#city", "#timelapse", "#vibes"],
     videoSrc: "http://localhost:8000/media/firstbucket/test.mp4",
   },
@@ -114,8 +110,7 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 333,
     saves: 1234,
-    thumbnail:
-      "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=80&w=1600&auto=format&fit=crop",
+    thumbnail: "./mov_bbb.jpg",
     tags: ["#example"],
     videoSrc: "http://localhost:8000/media/firstbucket/mov_bbb.mp4",
   },

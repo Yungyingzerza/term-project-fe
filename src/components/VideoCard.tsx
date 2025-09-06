@@ -17,6 +17,7 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
   const prevActiveRef = useRef<boolean>(isActive);
   const samplerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastSentColorRef = useRef<string | null>(null);
+  const [usePosterBg, setUsePosterBg] = useState<boolean>(false);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -47,13 +48,51 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
     }
   }, [playing, isActive]);
 
+  // Link background <video> to the primary video stream to avoid double network load.
+  useEffect(() => {
+    const v = videoRef.current;
+    const bg = bgVideoRef.current;
+    if (!v || !bg) return;
+    let active = true;
+    const link = () => {
+      if (!active) return;
+      try {
+        const stream: MediaStream | undefined =
+          (v as any).captureStream?.() || (v as any).mozCaptureStream?.();
+        if (stream) {
+          try {
+            (bg as any).srcObject = stream;
+            setUsePosterBg(false);
+          } catch {}
+        } else {
+          // Fallback: use blurred poster image background to avoid extra video load
+          setUsePosterBg(true);
+        }
+      } catch {
+        setUsePosterBg(true);
+      }
+    };
+    if (v.readyState >= 1) link();
+    else v.addEventListener("loadedmetadata", link);
+    return () => {
+      active = false;
+      v.removeEventListener("loadedmetadata", link as EventListener);
+      const b = bgVideoRef.current as any;
+      if (b) {
+        try {
+          b.srcObject = null;
+        } catch {}
+      }
+    };
+  }, [post.videoSrc]);
+
   useEffect(() => {
     const v = videoRef.current;
     const bg = bgVideoRef.current;
     if (!v) return;
     const syncBgTime = () => {
       const b = bgVideoRef.current;
-      if (!b || !v || !isFinite(v.currentTime)) return;
+      if (!b || (b as any).srcObject || !v || !isFinite(v.currentTime)) return;
       try {
         if (Math.abs((b.currentTime || 0) - v.currentTime) > 0.2) {
           b.currentTime = v.currentTime;
@@ -185,19 +224,28 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
   return (
     <article className="relative w-full h-full rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
       {/* Blurred video background to avoid black bars while preserving aspect ratio */}
-      <video
-        ref={bgVideoRef}
-        className="absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none"
-        src={post.videoSrc}
-        playsInline
-        muted
-        loop
-        autoPlay={isActive && playing}
-        aria-hidden
-      />
+      {usePosterBg ? (
+        <div
+          aria-hidden
+          className="absolute inset-0 z-0 w-full h-full bg-center bg-cover blur-2xl scale-110 pointer-events-none"
+          style={{ backgroundImage: `url(${post.thumbnail})` }}
+        />
+      ) : (
+        <video
+          ref={bgVideoRef}
+          className="absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none"
+          crossOrigin="anonymous"
+          playsInline
+          muted
+          loop
+          autoPlay={isActive && playing}
+          aria-hidden
+        />
+      )}
       <video
         ref={videoRef}
         className="relative z-10 object-contain w-full h-full"
+        crossOrigin="anonymous"
         src={post.videoSrc}
         poster={post.thumbnail}
         loop
