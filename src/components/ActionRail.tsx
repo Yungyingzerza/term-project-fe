@@ -63,9 +63,11 @@ export default function ActionRail({
       const hasHover =
         typeof window !== "undefined" &&
         !!(
-          (window.matchMedia && window.matchMedia("(any-hover: hover)").matches) ||
+          (window.matchMedia &&
+            window.matchMedia("(any-hover: hover)").matches) ||
           (window.matchMedia && window.matchMedia("(hover: hover)").matches) ||
-          (window.matchMedia && window.matchMedia("(any-pointer: fine)").matches) ||
+          (window.matchMedia &&
+            window.matchMedia("(any-pointer: fine)").matches) ||
           (window.matchMedia && window.matchMedia("(pointer: fine)").matches)
         );
       canHoverRef.current = hasHover;
@@ -167,7 +169,7 @@ export default function ActionRail({
   };
 
   return (
-    <div className="absolute right-2 sm:right-4 bottom-24 sm:bottom-6 flex flex-col items-center gap-4 z-30">
+    <div className="absolute right-2 sm:right-4 bottom-24 sm:bottom-6 flex flex-col items-center gap-4 z-30 touch-none">
       <div
         className="relative"
         onMouseEnter={() => {
@@ -221,7 +223,8 @@ export default function ActionRail({
           // Suppress the synthetic click only if the long-press ended on the main button
           // (no drag into the picker). If the user dragged to the picker to select,
           // don't suppress the next tap on the main button.
-          suppressClickRef.current = touchStartedOnMainRef.current && !movedOffMainRef.current;
+          suppressClickRef.current =
+            touchStartedOnMainRef.current && !movedOffMainRef.current;
           touchStartedOnMainRef.current = false;
           movedOffMainRef.current = false;
         }}
