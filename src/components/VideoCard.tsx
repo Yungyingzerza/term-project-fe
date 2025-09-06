@@ -94,25 +94,36 @@ export default function VideoCard({
   // Link background <video> to the primary video stream to avoid double network load.
   useEffect(() => {
     const v = videoRef.current;
-    const bg = bgVideoRef.current;
-    if (!v || !bg) return;
+    if (!v) return;
+
     // If we are not loading, or only preloading, keep poster bg and clear stream
     if (!shouldLoad || !isActive) {
       setUsePosterBg(true);
       try {
-        (bg as any).srcObject = null;
+        const b = bgVideoRef.current as any;
+        if (b) b.srcObject = null;
       } catch {}
       return;
     }
+
+    // Ensure the bg <video> element exists when we need it
+    if (!bgVideoRef.current) {
+      setUsePosterBg(false);
+      // Re-run after bg video mounts
+      return;
+    }
+
     let active = true;
     const link = () => {
       if (!active) return;
+      const bg = bgVideoRef.current as any;
+      if (!bg) return;
       try {
         const stream: MediaStream | undefined =
           (v as any).captureStream?.() || (v as any).mozCaptureStream?.();
         if (stream) {
           try {
-            (bg as any).srcObject = stream;
+            bg.srcObject = stream;
             setUsePosterBg(false);
           } catch {}
         } else {
@@ -135,7 +146,7 @@ export default function VideoCard({
         } catch {}
       }
     };
-  }, [post.videoSrc, shouldLoad, isActive]);
+  }, [post.videoSrc, shouldLoad, isActive, usePosterBg]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -168,7 +179,7 @@ export default function VideoCard({
       v.removeEventListener("seeked", onSeeked);
       bg?.removeEventListener("loadedmetadata", onBgLoaded);
     };
-  }, []);
+  }, [usePosterBg]);
 
   // When card becomes inactive and not preloading, ensure it stops and unloads
   useEffect(() => {
