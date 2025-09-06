@@ -101,21 +101,15 @@ export default function VideoCard({
       setUsePosterBg(true);
       try {
         const b = bgVideoRef.current as any;
-        if (b) {
-          b.srcObject = null;
-          // Also clear src if we set it in fallback mode
-          try {
-            b.removeAttribute("src");
-            b.load();
-          } catch {}
-        }
+        if (b) b.srcObject = null;
       } catch {}
       return;
     }
 
     // Ensure the bg <video> element exists when we need it
-    // Do not flip state here to avoid render loops on iOS where captureStream is unsupported
     if (!bgVideoRef.current) {
+      setUsePosterBg(false);
+      // Re-run after bg video mounts
       return;
     }
 
@@ -130,28 +124,13 @@ export default function VideoCard({
         if (stream) {
           try {
             bg.srcObject = stream;
-            // Ensure we are showing the bg video layer
             setUsePosterBg(false);
           } catch {}
         } else {
-          // iOS Safari: captureStream unsupported. Fallback to using the same src.
-          try {
-            const src = (v.currentSrc || v.src || (post as any).videoSrc) as string | undefined;
-            if (src) {
-              if (bg.src !== src) bg.src = src;
-              // Try to keep it in sync; separate effect adjusts currentTime
-              const p = bg.play?.();
-              if (p && typeof p.catch === "function") p.catch(() => {});
-              setUsePosterBg(false);
-            } else {
-              setUsePosterBg(true);
-            }
-          } catch {
-            setUsePosterBg(true);
-          }
+          // Fallback: use blurred poster image background to avoid extra video load
+          setUsePosterBg(true);
         }
       } catch {
-        // If anything fails, show blurred poster fallback
         setUsePosterBg(true);
       }
     };
@@ -164,12 +143,10 @@ export default function VideoCard({
       if (b) {
         try {
           b.srcObject = null;
-          b.removeAttribute("src");
-          b.load();
         } catch {}
       }
     };
-  }, [post.videoSrc, shouldLoad, isActive]);
+  }, [post.videoSrc, shouldLoad, isActive, usePosterBg]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -386,24 +363,24 @@ export default function VideoCard({
   return (
     <article className="relative w-full h-full rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
       {/* Blurred video background to avoid black bars while preserving aspect ratio */}
-      {/* Keep bg <video> always mounted; toggle visibility to avoid ref churn on iOS */}
-      <div
-        aria-hidden
-        className="absolute inset-0 z-0 w-full h-full bg-center bg-cover blur-2xl scale-110 pointer-events-none"
-        style={{ backgroundImage: `url(${post.thumbnail})` }}
-        hidden={!usePosterBg}
-      />
-      <video
-        ref={bgVideoRef}
-        className="absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none"
-        crossOrigin="anonymous"
-        playsInline
-        muted
-        loop
-        autoPlay={isActive && playing}
-        aria-hidden
-        hidden={usePosterBg}
-      />
+      {usePosterBg ? (
+        <div
+          aria-hidden
+          className="absolute inset-0 z-0 w-full h-full bg-center bg-cover blur-2xl scale-110 pointer-events-none"
+          style={{ backgroundImage: `url(${post.thumbnail})` }}
+        />
+      ) : (
+        <video
+          ref={bgVideoRef}
+          className="absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none"
+          crossOrigin="anonymous"
+          playsInline
+          muted
+          loop
+          autoPlay={isActive && playing}
+          aria-hidden
+        />
+      )}
       <video
         ref={videoRef}
         className="relative z-10 object-contain w-full h-full"
