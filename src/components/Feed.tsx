@@ -121,6 +121,28 @@ const SAMPLE_POSTS: PostItem[] = [
     tags: ["#example"],
     videoSrc: "http://192.168.1.2:8000/media/firstbucket/mov_bbb",
   },
+  {
+    id: "p6",
+    user: {
+      handle: "@moo.deng",
+      name: "Moo Deng",
+      avatar: "https://i.pravatar.cc/100?img=55",
+    },
+    caption: "Just a cow dancing in the field 🐄💃",
+    music: "country • farm vibes",
+    interactions: {
+      like: 5000,
+      love: 1200,
+      haha: 800,
+      sad: 20,
+      angry: 10,
+    },
+    comments: 256,
+    saves: 789,
+    thumbnail: "./mov_bbb.jpg",
+    tags: ["#cow", "#dance", "#funny"],
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/VID_25680905211410908",
+  },
 ];
 
 export default function Feed() {
