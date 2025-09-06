@@ -368,7 +368,7 @@ export default function VideoCard({
   }, [isActive, dispatch]);
 
   return (
-    <article className="relative w-full h-full rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
+    <article className="relative w-full h-full sm:rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
       {/* Blurred video background to avoid black bars while preserving aspect ratio */}
       <div
         aria-hidden

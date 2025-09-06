@@ -428,7 +428,7 @@ export default function Feed() {
       <div
         ref={containerRef}
         tabIndex={0}
-        className="mx-auto w-full max-w-[700px] px-3 overflow-hidden overscroll-none [--feed-top:56px]"
+        className="mx-auto w-full max-w-[700px] sm:px-3 overflow-hidden overscroll-none [--feed-top:56px]"
         style={{
           // Visible viewport minus fixed top bar and bottom tabs/safe-area.
           height:
