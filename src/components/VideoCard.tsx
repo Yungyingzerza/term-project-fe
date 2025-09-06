@@ -7,9 +7,15 @@ import ActionRail from "./ActionRail";
 import MusicTicker from "./MusicTicker";
 import { VideoCardProps } from "./types";
 
-export default function VideoCard({ post, isActive = false }: VideoCardProps) {
+export default function VideoCard({
+  post,
+  isActive = false,
+  shouldPreload = false,
+  preloadSeconds = 5,
+}: VideoCardProps) {
   const dispatch = useDispatch();
-  const muted = useSelector((s: any) => s.player.muted) as boolean;
+  const muted = (useSelector((s: any) => s.player.muted) &&
+    isActive) as boolean;
   const [playing, setPlaying] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -18,6 +24,14 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
   const samplerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastSentColorRef = useRef<string | null>(null);
   const [usePosterBg, setUsePosterBg] = useState<boolean>(false);
+  // Only load the active card's video, but allow light preload for next card
+  const shouldLoad = isActive || shouldPreload;
+  const preloadDoneRef = useRef<boolean>(false);
+
+  // Reset preload state when the source changes
+  useEffect(() => {
+    preloadDoneRef.current = false;
+  }, [post.videoSrc]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -48,11 +62,30 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
     }
   }, [playing, isActive]);
 
+  // Ensure mute state matches global when becoming active (may override preload's temp mute)
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (isActive) {
+      try {
+        v.muted = muted;
+      } catch {}
+    }
+  }, [isActive, muted]);
+
   // Link background <video> to the primary video stream to avoid double network load.
   useEffect(() => {
     const v = videoRef.current;
     const bg = bgVideoRef.current;
     if (!v || !bg) return;
+    // If we are not loading, or only preloading, keep poster bg and clear stream
+    if (!shouldLoad || !isActive) {
+      setUsePosterBg(true);
+      try {
+        (bg as any).srcObject = null;
+      } catch {}
+      return;
+    }
     let active = true;
     const link = () => {
       if (!active) return;
@@ -84,7 +117,7 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
         } catch {}
       }
     };
-  }, [post.videoSrc]);
+  }, [post.videoSrc, shouldLoad, isActive]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -119,10 +152,11 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
     };
   }, []);
 
-  // When card becomes inactive, ensure it stops and resets time
+  // When card becomes inactive and not preloading, ensure it stops and unloads
   useEffect(() => {
     const wasActive = prevActiveRef.current;
     prevActiveRef.current = isActive;
+    // Reset time when leaving active state
     if (wasActive && !isActive) {
       const v = videoRef.current;
       if (v) {
@@ -131,7 +165,77 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
         } catch {}
       }
     }
-  }, [isActive]);
+    // Fully unload when not active and not marked for preload
+    if (!isActive && !shouldPreload) {
+      const v = videoRef.current;
+      const bg = bgVideoRef.current as any;
+      try {
+        if (v) {
+          v.pause();
+          v.removeAttribute("src");
+          v.load();
+        }
+        if (bg) bg.srcObject = null;
+      } catch {}
+      setUsePosterBg(true);
+    }
+  }, [isActive, shouldPreload]);
+
+  // Note: preloading handled via props; unload handled above when not active and not preloading
+
+  // Approximate partial preload: when shouldPreload is true (but not active),
+  // briefly play muted to buffer up to preloadSeconds, then pause and reset to 0.
+  useEffect(() => {
+    if (!shouldPreload || isActive) return;
+    const v = videoRef.current;
+    if (!v) return;
+    if (preloadDoneRef.current) return;
+
+    let cancelled = false;
+    let played = false;
+
+    const maybeStart = () => {
+      if (!v || cancelled || preloadDoneRef.current) return;
+      try {
+        // Ensure muted for autoplay policies
+        v.muted = true;
+        // Encourage buffering; playback will fetch regardless of preload attr
+        const p = v.play();
+        played = true;
+        if (p && typeof p.catch === "function") {
+          p.catch(() => {});
+        }
+      } catch {}
+    };
+
+    const onMeta = () => maybeStart();
+    const onCanPlay = () => maybeStart();
+    const onTime = () => {
+      if (!v || cancelled || !played) return;
+      if (!isFinite(preloadSeconds) || preloadSeconds <= 0) return;
+      if (v.currentTime >= preloadSeconds) {
+        try {
+          v.pause();
+          // Reset to start so when activated it starts from 0, keeping buffer
+          v.currentTime = 0;
+        } catch {}
+        preloadDoneRef.current = true;
+      }
+    };
+
+    // If metadata is already available, try immediately
+    if (v.readyState >= 1) maybeStart();
+    v.addEventListener("loadedmetadata", onMeta);
+    v.addEventListener("canplay", onCanPlay);
+    v.addEventListener("timeupdate", onTime);
+
+    return () => {
+      cancelled = true;
+      v.removeEventListener("loadedmetadata", onMeta);
+      v.removeEventListener("canplay", onCanPlay);
+      v.removeEventListener("timeupdate", onTime);
+    };
+  }, [shouldPreload, isActive, preloadSeconds, post.videoSrc]);
 
   // Ambient color sampler (YouTube-like)
   useEffect(() => {
@@ -246,7 +350,8 @@ export default function VideoCard({ post, isActive = false }: VideoCardProps) {
         ref={videoRef}
         className="relative z-10 object-contain w-full h-full"
         crossOrigin="anonymous"
-        src={post.videoSrc}
+        src={shouldLoad ? post.videoSrc : undefined}
+        preload={isActive ? "auto" : shouldPreload ? "metadata" : "none"}
         poster={post.thumbnail}
         loop
         playsInline

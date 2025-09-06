@@ -3,6 +3,13 @@ import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
 import VideoCard from "./VideoCard";
 import { PostItem } from "./types";
 
+// How many items to preload relative to the active index
+// Increase these to buffer more videos at the cost of bandwidth/memory.
+const PRELOAD_AHEAD = 1; // e.g., 2 preloads the next two videos
+const PRELOAD_BEHIND = 0; // e.g., 1 also preloads the previous video
+// How many seconds to warm buffer for each preloaded video (approximate)
+const PRELOAD_SECONDS = 3;
+
 const SAMPLE_POSTS: PostItem[] = [
   {
     id: "p1",
@@ -22,9 +29,9 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 632,
     saves: 940,
-    thumbnail: "./Download (2).jpg",
+    thumbnail: "./Download (1).jpg",
     tags: ["#ai", "#setup", "#aesthetic"],
-    videoSrc: "http://localhost:8000/media/firstbucket/Download (2).mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/Download (1).mp4",
   },
   {
     id: "p2",
@@ -44,9 +51,9 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 421,
     saves: 1205,
-    thumbnail: "./Download.jpg",
+    thumbnail: "./Download (2).jpg",
     tags: ["#ramen", "#hack", "#homecooking"],
-    videoSrc: "http://localhost:8000/media/firstbucket/Download.mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/Download (2).mp4",
   },
   {
     id: "p3",
@@ -66,9 +73,9 @@ const SAMPLE_POSTS: PostItem[] = [
     },
     comments: 1170,
     saves: 3802,
-    thumbnail: "./Download (1).jpg",
+    thumbnail: "./Download.jpg",
     tags: ["#wellness", "#stretch", "#desk"],
-    videoSrc: "http://localhost:8000/media/firstbucket/Download (1).mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/Download.mp4",
   },
   {
     id: "p4",
@@ -410,7 +417,19 @@ export default function Feed() {
                 key={`${p.id}-${i}`}
                 style={{ height: containerH || "100%" }}
               >
-                <VideoCard post={p} isActive={i === index} />
+                {(() => {
+                  const preloadNext = i > index && i <= index + PRELOAD_AHEAD;
+                  const preloadPrev = i < index && i >= index - PRELOAD_BEHIND;
+                  const shouldPreload = preloadNext || preloadPrev;
+                  return (
+                    <VideoCard
+                      post={p}
+                      isActive={i === index}
+                      shouldPreload={shouldPreload}
+                      preloadSeconds={PRELOAD_SECONDS}
+                    />
+                  );
+                })()}
               </div>
             ))}
           </div>
