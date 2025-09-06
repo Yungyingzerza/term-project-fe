@@ -53,7 +53,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 1205,
     thumbnail: "./Download (2).jpg",
     tags: ["#ramen", "#hack", "#homecooking"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/Download (2)",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/IMG_1834",
   },
   {
     id: "p3",
@@ -75,7 +75,8 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 3802,
     thumbnail: "./Download.jpg",
     tags: ["#wellness", "#stretch", "#desk"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/Download",
+    videoSrc:
+      "http://192.168.1.2:8000/media/firstbucket/copy_3BE6AC74-2144-4EBE-B1E6-E8EAA81F1CE8",
   },
   {
     id: "p4",
@@ -119,7 +120,7 @@ const SAMPLE_POSTS: PostItem[] = [
     saves: 1234,
     thumbnail: "./mov_bbb.jpg",
     tags: ["#example"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/mov_bbb",
+    videoSrc: "http://192.168.1.2:8000/media/firstbucket/export_1713134609950",
   },
   {
     id: "p6",
