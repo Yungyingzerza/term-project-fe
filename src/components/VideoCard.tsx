@@ -92,52 +92,59 @@ export default function VideoCard({
   }, [isActive, muted]);
 
   // Link background <video> to the primary video stream to avoid double network load.
+  // On platforms without captureStream (iOS Safari), fall back to the poster background.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    // If we are not loading, or only preloading, keep poster bg and clear stream
+    const bg = bgVideoRef.current as HTMLVideoElement | null;
+
+    // If we are not loading or not active, prefer poster and clear any linked stream
     if (!shouldLoad || !isActive) {
       setUsePosterBg(true);
       try {
-        const b = bgVideoRef.current as any;
-        if (b) b.srcObject = null;
+        if (bg && (bg as any).srcObject) (bg as any).srcObject = null;
       } catch {}
       return;
     }
 
-    // Ensure the bg <video> element exists when we need it
-    if (!bgVideoRef.current) {
-      setUsePosterBg(false);
-      // Re-run after bg video mounts
+    // Feature detection: captureStream is not supported on many mobile browsers
+    const supportsCapture =
+      typeof (v as any).captureStream === "function" ||
+      typeof (v as any).mozCaptureStream === "function";
+    if (!supportsCapture) {
+      setUsePosterBg(true);
       return;
     }
 
-    let active = true;
+    let cancelled = false;
     const link = () => {
-      if (!active) return;
-      const bg = bgVideoRef.current as any;
-      if (!bg) return;
+      if (cancelled) return;
+      const bgEl = bgVideoRef.current as any;
+      if (!bgEl) return;
       try {
         const stream: MediaStream | undefined =
           (v as any).captureStream?.() || (v as any).mozCaptureStream?.();
         if (stream) {
           try {
-            bg.srcObject = stream;
+            bgEl.srcObject = stream;
             setUsePosterBg(false);
-          } catch {}
+          } catch {
+            setUsePosterBg(true);
+          }
         } else {
-          // Fallback: use blurred poster image background to avoid extra video load
           setUsePosterBg(true);
         }
       } catch {
         setUsePosterBg(true);
       }
     };
+
     if (v.readyState >= 1) link();
     else v.addEventListener("loadedmetadata", link);
+
     return () => {
-      active = false;
+      cancelled = true;
       v.removeEventListener("loadedmetadata", link as EventListener);
       const b = bgVideoRef.current as any;
       if (b) {
@@ -146,7 +153,7 @@ export default function VideoCard({
         } catch {}
       }
     };
-  }, [post.videoSrc, shouldLoad, isActive, usePosterBg]);
+  }, [post.videoSrc, shouldLoad, isActive]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -363,24 +370,25 @@ export default function VideoCard({
   return (
     <article className="relative w-full h-full rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
       {/* Blurred video background to avoid black bars while preserving aspect ratio */}
-      {usePosterBg ? (
-        <div
-          aria-hidden
-          className="absolute inset-0 z-0 w-full h-full bg-center bg-cover blur-2xl scale-110 pointer-events-none"
-          style={{ backgroundImage: `url(${post.thumbnail})` }}
-        />
-      ) : (
-        <video
-          ref={bgVideoRef}
-          className="absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none"
-          crossOrigin="anonymous"
-          playsInline
-          muted
-          loop
-          autoPlay={isActive && playing}
-          aria-hidden
-        />
-      )}
+      <div
+        aria-hidden
+        className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover blur-2xl scale-110 pointer-events-none ${
+          usePosterBg ? "" : "hidden"
+        }`}
+        style={{ backgroundImage: `url(${post.thumbnail})` }}
+      />
+      <video
+        ref={bgVideoRef}
+        className={`absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none ${
+          usePosterBg ? "hidden" : ""
+        }`}
+        crossOrigin="anonymous"
+        playsInline
+        muted
+        loop
+        autoPlay={isActive && playing}
+        aria-hidden
+      />
       <video
         ref={videoRef}
         className="relative z-10 object-contain w-full h-full"
