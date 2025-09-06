@@ -31,7 +31,6 @@ export default function UploadPage() {
   const [postOrgs, setPostOrgs] = useState<string[]>([]);
   const [viewOrgs, setViewOrgs] = useState<string[]>([]);
   const [postOrgQuery, setPostOrgQuery] = useState("");
-  const [viewOrgQuery, setViewOrgQuery] = useState("");
 
   const ORGS = [
     { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
@@ -51,12 +50,6 @@ export default function UploadPage() {
     if (!q) return ORGS;
     return ORGS.filter((o) => o.name.toLowerCase().includes(q));
   }, [postOrgQuery]);
-
-  const filteredViewChoices = useMemo(() => {
-    const q = viewOrgQuery.toLowerCase().trim();
-    if (!q) return ORGS;
-    return ORGS.filter((o) => o.name.toLowerCase().includes(q));
-  }, [viewOrgQuery]);
 
   const onPickFile = () => inputRef.current?.click();
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
