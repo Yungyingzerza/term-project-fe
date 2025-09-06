@@ -25,7 +25,7 @@ const SAMPLE_POSTS: PostItem[] = [
     thumbnail:
       "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop",
     tags: ["#ai", "#setup", "#aesthetic"],
-    videoSrc: "/test.mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/Download (2).mp4",
   },
   {
     id: "p2",
@@ -48,7 +48,7 @@ const SAMPLE_POSTS: PostItem[] = [
     thumbnail:
       "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?q=80&w=1600&auto=format&fit=crop",
     tags: ["#ramen", "#hack", "#homecooking"],
-    videoSrc: "/Download.mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/Download.mp4",
   },
   {
     id: "p3",
@@ -71,7 +71,7 @@ const SAMPLE_POSTS: PostItem[] = [
     thumbnail:
       "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?q=80&w=1600&auto=format&fit=crop",
     tags: ["#wellness", "#stretch", "#desk"],
-    videoSrc: "/Download (1).mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/Download (1).mp4",
   },
   {
     id: "p4",
@@ -94,7 +94,7 @@ const SAMPLE_POSTS: PostItem[] = [
     thumbnail:
       "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=80&w=1600&auto=format&fit=crop",
     tags: ["#city", "#timelapse", "#vibes"],
-    videoSrc: "/Download (2).mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/test.mp4",
   },
   {
     id: "p5",
@@ -117,7 +117,7 @@ const SAMPLE_POSTS: PostItem[] = [
     thumbnail:
       "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=80&w=1600&auto=format&fit=crop",
     tags: ["#example"],
-    videoSrc: "/mov_bbb.mp4",
+    videoSrc: "http://localhost:8000/media/firstbucket/mov_bbb.mp4",
   },
 ];
 
@@ -178,8 +178,15 @@ export default function Feed() {
       if (!el) return;
       setContainerH(el.getBoundingClientRect().height || 0);
     };
-    window.addEventListener("bottom-tabs-height-change", recalc as EventListener);
-    return () => window.removeEventListener("bottom-tabs-height-change", recalc as EventListener);
+    window.addEventListener(
+      "bottom-tabs-height-change",
+      recalc as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "bottom-tabs-height-change",
+        recalc as EventListener
+      );
   }, []);
 
   const isInteractiveTarget = (target: EventTarget | null): boolean => {
@@ -189,27 +196,25 @@ export default function Feed() {
     // including ActionRail controls and their picker.
     return !!el.closest(
       [
-        'button',
-        'a',
-        'input',
-        'select',
-        'textarea',
+        "button",
+        "a",
+        "input",
+        "select",
+        "textarea",
         '[role="button"]',
         '[role="radio"]',
         '[role="radiogroup"]',
-        '[data-reaction]',
-        '[data-prevent-feed-swipe]',
+        "[data-reaction]",
+        "[data-prevent-feed-swipe]",
         '[aria-label="React"]',
         '[aria-label="Reactions"]',
-      ].join(',')
+      ].join(",")
     );
   };
 
   useLayoutEffect(() => {
     const update = () =>
-      setContainerH(
-        containerRef.current?.getBoundingClientRect().height || 0
-      );
+      setContainerH(containerRef.current?.getBoundingClientRect().height || 0);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
@@ -231,7 +236,12 @@ export default function Feed() {
         return;
       }
       setIsAnimating(true);
-      setOffset(dir * (containerH || containerRef.current?.getBoundingClientRect().height || 0));
+      setOffset(
+        dir *
+          (containerH ||
+            containerRef.current?.getBoundingClientRect().height ||
+            0)
+      );
       window.setTimeout(() => {
         setIndex(target);
         setOffset(0);
@@ -253,7 +263,9 @@ export default function Feed() {
         e.deltaMode === 1
           ? 16
           : e.deltaMode === 2
-          ? containerH || containerRef.current?.getBoundingClientRect().height || 1
+          ? containerH ||
+            containerRef.current?.getBoundingClientRect().height ||
+            1
           : 1;
       const deltaPx = e.deltaY * unit;
 
@@ -290,7 +302,12 @@ export default function Feed() {
       const target = index + dir;
       if (target < 0 || target > posts.length - 1) return;
       setIsAnimating(true);
-      setOffset(dir * (containerH || containerRef.current?.getBoundingClientRect().height || 0));
+      setOffset(
+        dir *
+          (containerH ||
+            containerRef.current?.getBoundingClientRect().height ||
+            0)
+      );
       window.setTimeout(() => {
         setIndex(target);
         setOffset(0);
@@ -342,7 +359,12 @@ export default function Feed() {
         return;
       }
       setIsAnimating(true);
-      setOffset(dir * (containerH || containerRef.current?.getBoundingClientRect().height || 0));
+      setOffset(
+        dir *
+          (containerH ||
+            containerRef.current?.getBoundingClientRect().height ||
+            0)
+      );
       window.setTimeout(() => {
         setIndex(target);
         setOffset(0);
