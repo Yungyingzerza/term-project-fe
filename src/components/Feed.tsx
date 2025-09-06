@@ -5,7 +5,7 @@ import { PostItem } from "./types";
 
 // How many items to preload relative to the active index
 // Increase these to buffer more videos at the cost of bandwidth/memory.
-const PRELOAD_AHEAD = 1; // e.g., 2 preloads the next two videos
+// const PRELOAD_AHEAD = 1; // e.g., 2 preloads the next two videos
 const PRELOAD_BEHIND = 0; // e.g., 1 also preloads the previous video
 // How many seconds to warm buffer for each preloaded video (approximate)
 const PRELOAD_SECONDS = 3;
@@ -134,6 +134,40 @@ export default function Feed() {
   const lastSnapAtRef = useRef<number>(0);
   const [containerH, setContainerH] = useState<number>(0);
   const ignoreSwipeRef = useRef<boolean>(false);
+  const [PRELOAD_AHEAD, setPRELOAD_AHEAD] = useState<number>(0);
+
+  //estimate network speed
+  useEffect(() => {
+    const image = new Image();
+    const imageUrl =
+      "https://upload.wikimedia.org/wikipedia/commons/3/3a/Cat03.jpg"; // ~300KB file
+    const startTime = new Date().getTime();
+
+    image.onload = () => {
+      const endTime = new Date().getTime();
+      const duration = (endTime - startTime) / 1000; // seconds
+      const fileSizeBytes = 300 * 1024; // 300 KB (approx)
+      const bitsLoaded = fileSizeBytes * 8;
+      const speedMbps = parseFloat(
+        (bitsLoaded / duration / (1024 * 1024)).toFixed(2)
+      );
+
+      if (speedMbps < 2) {
+        setPRELOAD_AHEAD(0);
+      } else if (speedMbps >= 2 && speedMbps < 5) {
+        setPRELOAD_AHEAD(1);
+      } else {
+        setPRELOAD_AHEAD(2);
+      }
+    };
+
+    image.onerror = () => {
+      setPRELOAD_AHEAD(0);
+    };
+
+    // Trigger download
+    image.src = `${imageUrl}?cacheBust=${Math.random()}`;
+  }, []);
 
   // Robust mobile viewport handling: prefer 100dvh when supported, otherwise
   // fall back to the real visible viewport height in pixels.
