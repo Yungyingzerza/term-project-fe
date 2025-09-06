@@ -27,6 +27,12 @@ export default function VideoCard({
   // Only load the active card's video, but allow light preload for next card
   const shouldLoad = isActive || shouldPreload;
   const preloadDoneRef = useRef<boolean>(false);
+  const isActiveRef = useRef<boolean>(isActive);
+
+  // Track latest isActive in a ref to avoid stale closures in event handlers
+  useEffect(() => {
+    isActiveRef.current = isActive;
+  }, [isActive]);
 
   // Reset preload state when the source changes
   useEffect(() => {
@@ -41,6 +47,18 @@ export default function VideoCard({
     const bg = bgVideoRef.current;
     if (bg) bg.muted = true;
   }, [muted]);
+
+  // When becoming active, ensure playhead starts from 0 even if preloading advanced it
+  useEffect(() => {
+    if (!isActive) return;
+    const v = videoRef.current;
+    if (!v) return;
+    try {
+      if (isFinite(v.currentTime) && v.currentTime > 0.05) {
+        v.currentTime = 0;
+      }
+    } catch {}
+  }, [isActive, post.videoSrc]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -212,6 +230,8 @@ export default function VideoCard({
     const onCanPlay = () => maybeStart();
     const onTime = () => {
       if (!v || cancelled || !played) return;
+      // If card became active, do not interfere with playback
+      if (isActiveRef.current) return;
       if (!isFinite(preloadSeconds) || preloadSeconds <= 0) return;
       if (v.currentTime >= preloadSeconds) {
         try {
@@ -220,6 +240,10 @@ export default function VideoCard({
           v.currentTime = 0;
         } catch {}
         preloadDoneRef.current = true;
+        // Once done, stop listening to avoid races
+        v.removeEventListener("timeupdate", onTime);
+        v.removeEventListener("loadedmetadata", onMeta);
+        v.removeEventListener("canplay", onCanPlay);
       }
     };
 
