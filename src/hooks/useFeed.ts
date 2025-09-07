@@ -25,13 +25,10 @@ export interface GetFeedParams {
  * GET /feed?algo=for-you|following&limit&cursor
  */
 export async function getFeed({ algo = "for-you", limit = 10, cursor, signal }: GetFeedParams = {}): Promise<FeedResponse> {
-  // Prefer NEXT_PUBLIC_* in client; fall back to NEXT_BASE_API if provided.
-  const base =
-    (typeof process !== "undefined"
-      ? (process.env.NEXT_PUBLIC_BASE_API || process.env.NEXT_BASE_API)
-      : undefined) || "";
+  // Use the public base API from env
+  const base = process.env.NEXT_PUBLIC_BASE_API as string;
 
-  const url = new URL("/feed", base || (typeof window !== "undefined" ? window.location.origin : "http://localhost"));
+  const url = new URL("/feed", base);
   url.searchParams.set("algo", algo);
   if (limit != null) url.searchParams.set("limit", String(limit));
   if (cursor) url.searchParams.set("cursor", cursor);
