@@ -1,6 +1,6 @@
 "use client";
 import { Angry, Frown, Heart, Laugh, Smile, ThumbsUp } from "lucide-react";
-import { ReactionKey } from "./types";
+import type { ReactionKey } from "@/interfaces";
 
 export interface ReactionIconProps {
   name: ReactionKey;

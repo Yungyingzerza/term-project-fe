@@ -1,5 +1,5 @@
 import { Music2 } from "lucide-react";
-import { MusicTickerProps } from "./types";
+import type { MusicTickerProps } from "@/interfaces";
 
 export default function MusicTicker({ text }: MusicTickerProps) {
   return (

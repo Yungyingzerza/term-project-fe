@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { toggleMuted, setAmbientColor } from "@/store/playerSlice";
 import ActionRail from "./ActionRail";
 import MusicTicker from "./MusicTicker";
-import { VideoCardProps } from "./types";
+import type { VideoCardProps } from "@/interfaces";
 
 export default function VideoCard({
   post,

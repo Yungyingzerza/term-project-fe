@@ -4,7 +4,7 @@ This document outlines expected REST endpoints and payloads inferred from the cu
 
 Sources in code:
 
-- Post and reaction model: `src/components/types.ts:1`
+- Post and reaction model: `src/interfaces/post.ts:1`
 - Feed sample posts: `src/components/Feed.tsx:6`
 - Explore grid: `src/components/ExplorePage.tsx:13`
 - Profile grid: `src/components/ProfilePage.tsx:17`

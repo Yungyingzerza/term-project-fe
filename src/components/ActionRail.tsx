@@ -1,7 +1,7 @@
 "use client";
 import { Bookmark, MessageCircle, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ActionRailProps, Interactions, ReactionKey } from "./types";
+import type { ActionRailProps, Interactions, ReactionKey } from "@/interfaces";
 import ReactionIcon from "./ReactionIcon";
 
 // UX timing constants (ms)

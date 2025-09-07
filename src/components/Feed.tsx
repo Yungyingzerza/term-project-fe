@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
 import VideoCard from "./VideoCard";
-import { PostItem } from "./types";
+import type { PostItem } from "@/interfaces";
 
 // How many items to preload relative to the active index
 // Increase these to buffer more videos at the cost of bandwidth/memory.
