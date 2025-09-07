@@ -1,7 +1,8 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { usePathname } from "next/navigation";
 import VideoCard from "./VideoCard";
-import type { PostItem } from "@/interfaces";
+import { useFeed } from "@/hooks/useFeed";
 
 // How many items to preload relative to the active index
 // Increase these to buffer more videos at the cost of bandwidth/memory.
@@ -10,144 +11,16 @@ const PRELOAD_BEHIND = 0; // e.g., 1 also preloads the previous video
 // How many seconds to warm buffer for each preloaded video (approximate)
 const PRELOAD_SECONDS = 3;
 
-const SAMPLE_POSTS: PostItem[] = [
-  {
-    id: "p1",
-    user: {
-      handle: "@lumina.ai",
-      name: "Lumina",
-      avatar: "https://i.pravatar.cc/100?img=1",
-    },
-    caption: "AI lights that sync with your mood ✨",
-    music: "lofi • midnight drive",
-    interactions: {
-      like: 9800,
-      love: 1800,
-      haha: 400,
-      sad: 150,
-      angry: 150,
-    },
-    comments: 632,
-    saves: 940,
-    thumbnail: "./Download (1).jpg",
-    tags: ["#ai", "#setup", "#aesthetic"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/Download (1)",
-  },
-  {
-    id: "p2",
-    user: {
-      handle: "@chef.jun",
-      name: "Chef Jun",
-      avatar: "https://i.pravatar.cc/100?img=12",
-    },
-    caption: "10-min ramen hack that actually slaps 🍜",
-    music: "city pop • summer night",
-    interactions: {
-      like: 7000,
-      love: 1800,
-      haha: 300,
-      sad: 150,
-      angry: 126,
-    },
-    comments: 421,
-    saves: 1205,
-    thumbnail: "./Download (2).jpg",
-    tags: ["#ramen", "#hack", "#homecooking"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/IMG_1834",
-  },
-  {
-    id: "p3",
-    user: {
-      handle: "@move.studio",
-      name: "Move Studio",
-      avatar: "https://i.pravatar.cc/100?img=33",
-    },
-    caption: "5-min posture reset for desk goblins 🧘‍♀️",
-    music: "ambient • sea breeze",
-    interactions: {
-      like: 15000,
-      love: 30000,
-      haha: 400,
-      sad: 240,
-      angry: 900,
-    },
-    comments: 1170,
-    saves: 3802,
-    thumbnail: "./Download.jpg",
-    tags: ["#wellness", "#stretch", "#desk"],
-    videoSrc:
-      "http://192.168.1.2:8000/media/firstbucket/copy_3BE6AC74-2144-4EBE-B1E6-E8EAA81F1CE8",
-  },
-  {
-    id: "p4",
-    user: {
-      handle: "@urban.vibes",
-      name: "Urban Vibes",
-      avatar: "https://i.pravatar.cc/100?img=45",
-    },
-    caption: "City night timelapse with chill beats 🌃",
-    music: "chillhop • late night",
-    interactions: {
-      like: 11000,
-      love: 2600,
-      haha: 400,
-      sad: 234,
-      angry: 400,
-    },
-    comments: 389,
-    saves: 1287,
-    thumbnail: "./test.jpg",
-    tags: ["#city", "#timelapse", "#vibes"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/test",
-  },
-  {
-    id: "p5",
-    user: {
-      handle: "@bear.vibes",
-      name: "Bear Vibes",
-      avatar: "https://i.pravatar.cc/100?img=45",
-    },
-    caption: "City night timelapse with chill beats 🌃",
-    music: "chillhop • late night",
-    interactions: {
-      like: 800,
-      love: 150,
-      haha: 3000,
-      sad: 30,
-      angry: 31,
-    },
-    comments: 333,
-    saves: 1234,
-    thumbnail: "./mov_bbb.jpg",
-    tags: ["#example"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/export_1713134609950",
-  },
-  {
-    id: "p6",
-    user: {
-      handle: "@moo.deng",
-      name: "Moo Deng",
-      avatar: "https://i.pravatar.cc/100?img=55",
-    },
-    caption: "Just a cow dancing in the field 🐄💃",
-    music: "country • farm vibes",
-    interactions: {
-      like: 5000,
-      love: 1200,
-      haha: 800,
-      sad: 20,
-      angry: 10,
-    },
-    comments: 256,
-    saves: 789,
-    thumbnail: "./mov_bbb.jpg",
-    tags: ["#cow", "#dance", "#funny"],
-    videoSrc: "http://192.168.1.2:8000/media/firstbucket/VID_25680905211410908",
-  },
-];
+// Data is now provided by useFeed hook; sample posts removed.
 
 export default function Feed() {
-  const posts = useMemo<PostItem[]>(() => SAMPLE_POSTS, []);
+  const pathname = usePathname();
+  const initialAlgo = pathname?.startsWith("/following")
+    ? "following"
+    : "for-you";
+  const { items, loading, error, fetchNext, hasMore, setAlgo, algo, refetch } =
+    useFeed({ algo: initialAlgo, limit: 8 });
+
   const [index, setIndex] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
@@ -158,6 +31,20 @@ export default function Feed() {
   const [containerH, setContainerH] = useState<number>(0);
   const ignoreSwipeRef = useRef<boolean>(false);
   const [PRELOAD_AHEAD, setPRELOAD_AHEAD] = useState<number>(0);
+  const prefetchIndexRef = useRef<number | null>(null);
+
+  // Keep hook algo in sync with route changes
+  useEffect(() => {
+    const nextAlgo = pathname?.startsWith("/following")
+      ? "following"
+      : "for-you";
+    if (nextAlgo !== algo) {
+      setAlgo(nextAlgo);
+      setIndex(0);
+      setOffset(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   //estimate network speed
   useEffect(() => {
@@ -289,7 +176,7 @@ export default function Feed() {
   useEffect(() => {
     const animateSnap = (dir: number) => {
       const target = index + dir;
-      if (target < 0 || target > posts.length - 1) {
+      if (target < 0 || target > items.length - 1) {
         // bounce back at edges
         setOffset(0);
         return;
@@ -338,7 +225,7 @@ export default function Feed() {
     window.addEventListener("wheel", handleWheel, { passive: false });
     return () =>
       window.removeEventListener("wheel", handleWheel as EventListener);
-  }, [index, isAnimating, containerH, posts.length]);
+  }, [index, isAnimating, containerH, items.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -359,7 +246,7 @@ export default function Feed() {
       e.preventDefault();
       const dir = down ? 1 : -1;
       const target = index + dir;
-      if (target < 0 || target > posts.length - 1) return;
+      if (target < 0 || target > items.length - 1) return;
       setIsAnimating(true);
       setOffset(
         dir *
@@ -376,7 +263,7 @@ export default function Feed() {
     window.addEventListener("keydown", handleKeyDown, { passive: false });
     return () =>
       window.removeEventListener("keydown", handleKeyDown as EventListener);
-  }, [index, isAnimating, containerH, posts.length]);
+  }, [index, isAnimating, containerH, items.length]);
 
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
@@ -413,7 +300,7 @@ export default function Feed() {
         return;
       }
       const target = index + dir;
-      if (target < 0 || target > posts.length - 1) {
+      if (target < 0 || target > items.length - 1) {
         setOffset(0);
         return;
       }
@@ -438,13 +325,36 @@ export default function Feed() {
       window.removeEventListener("touchmove", onTouchMove as EventListener);
       window.removeEventListener("touchend", onTouchEnd as EventListener);
     };
-  }, [index, isAnimating, containerH, posts.length]);
+  }, [index, isAnimating, containerH, items.length]);
 
   useEffect(() => {
     setOffset(0);
   }, [index]);
 
   // With full list rendering, we no longer need prev/next indices
+
+  // Prefetch next page when approaching the end
+  useEffect(() => {
+    if (!hasMore) return;
+    // When within 1 from the end (accounting for preload), fetch next page.
+    // Guard to only trigger once per index value to avoid spamming.
+    const nearEnd = items.length > 0 && index >= items.length - 1 - PRELOAD_AHEAD;
+    if (nearEnd && prefetchIndexRef.current !== index) {
+      prefetchIndexRef.current = index;
+      void fetchNext();
+    }
+    if (!nearEnd) {
+      // Reset guard when moving away from the end
+      prefetchIndexRef.current = null;
+    }
+  }, [index, items.length, PRELOAD_AHEAD, hasMore, fetchNext]);
+
+  // Ensure index stays within bounds if items shrink (e.g., refetch/reset)
+  useEffect(() => {
+    if (index > 0 && index > items.length - 1) {
+      setIndex(Math.max(0, items.length - 1));
+    }
+  }, [items.length, index]);
 
   return (
     <main className="flex-1">
@@ -469,7 +379,7 @@ export default function Feed() {
               transition: isAnimating ? `transform ${animMs}ms ease` : "none",
             }}
           >
-            {posts.map((p, i) => (
+            {items.map((p, i) => (
               <div
                 key={`${p.id}-${i}`}
                 style={{ height: containerH || "100%" }}
@@ -489,6 +399,28 @@ export default function Feed() {
                 })()}
               </div>
             ))}
+            {items.length === 0 && (
+              <div
+                className="flex items-center justify-center w-full"
+                style={{ height: containerH || "100%" }}
+              >
+                <div className="text-center text-white/70">
+                  {error ? (
+                    <div className="space-y-2">
+                      <p>Failed to load feed.</p>
+                      <button
+                        className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold hover:opacity-90"
+                        onClick={() => refetch()}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : (
+                    <p>{loading ? "Loading…" : "No posts yet."}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

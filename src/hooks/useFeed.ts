@@ -87,7 +87,7 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
   // Track the latest request to avoid race conditions.
   const inFlight = useRef<AbortController | null>(null);
 
-  const canAutoFetch = enabled && !loading && items.length === 0;
+  // previously used to auto-fetch on mount; no longer needed to avoid duplicate requests
 
   const doFetch = useCallback(
     async (mode: "reset" | "append") => {
@@ -125,13 +125,13 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
     setError(null);
   }, []);
 
-  // Auto-fetch on mount or when algo changes.
+  // Keep internal algo in sync with external option when it changes.
   useEffect(() => {
-    // When algo changes via external opts, keep state in sync
-    setAlgo(initialAlgo);
-  }, [initialAlgo]);
+    if (initialAlgo !== algo) setAlgo(initialAlgo);
+  }, [initialAlgo, algo]);
 
   useEffect(() => {
+    // Single controlled fetch per (algo, limit, enabled) change
     reset();
     if (enabled) {
       void refetch();
@@ -139,11 +139,7 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algo, enabled, limit]);
 
-  // Initial load if nothing fetched yet
-  useEffect(() => {
-    if (canAutoFetch) void refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAutoFetch]);
+  // Remove extra auto-fetch to avoid duplicate initial requests.
 
   // Cleanup in-flight on unmount
   useEffect(() => () => inFlight.current?.abort(), []);
