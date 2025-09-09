@@ -22,21 +22,13 @@ export default function Feed() {
     useFeed({ algo: initialAlgo, limit: 8 });
 
   const [index, setIndex] = useState<number>(0);
-  const [offset, setOffset] = useState<number>(0);
-  const [isAnimating, setIsAnimating] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const animMs = 320;
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
   const slideElsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const touchStartY = useRef<number | null>(null);
-  const lastSnapAtRef = useRef<number>(0);
   const [containerH, setContainerH] = useState<number>(0);
   const ignoreSwipeRef = useRef<boolean>(false);
   const [PRELOAD_AHEAD, setPRELOAD_AHEAD] = useState<number>(0);
   const prefetchIndexRef = useRef<number | null>(null);
-  const gestureOffsetRef = useRef<number>(0);
-  const rafIdRef = useRef<number | null>(null);
   const scrollStopTimerRef = useRef<number | null>(null);
 
   // Keep hook algo in sync with route changes
@@ -47,7 +39,6 @@ export default function Feed() {
     if (nextAlgo !== algo) {
       setAlgo(nextAlgo);
       setIndex(0);
-      setOffset(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
@@ -87,7 +78,7 @@ export default function Feed() {
 
   // Native scroll-snap: observe which slide is mostly visible to set active index
   useEffect(() => {
-    const root = scrollerRef.current;
+    const root = containerRef.current as Element | null;
     if (!root) return;
     const io = new IntersectionObserver(
       (entries) => {
@@ -205,7 +196,7 @@ export default function Feed() {
 
   // Native scroll: set dragging on scroll, clear shortly after it settles
   useEffect(() => {
-    const el = scrollerRef.current;
+    const el = containerRef.current as HTMLElement | null;
     if (!el) return;
     const onScroll = () => {
       if (!isDragging) setIsDragging(true);
@@ -244,9 +235,7 @@ export default function Feed() {
     };
   }, []);
 
-  useEffect(() => {
-    setOffset(0);
-  }, [index]);
+  // no-op: index changes are handled by native scroll
 
   // With full list rendering, we no longer need prev/next indices
 
@@ -274,83 +263,72 @@ export default function Feed() {
   }, [items.length, index]);
 
   return (
-    <main className="flex-1">
-      <div
-        ref={containerRef}
-        tabIndex={0}
-        className="mx-auto w-full max-w-[700px] sm:px-3 overflow-hidden overscroll-none [--feed-top:56px]"
-        style={{
-          // Visible viewport minus fixed top bar and bottom tabs/safe-area.
-          height:
-            "calc(var(--app-vh, 100dvh) - var(--feed-top, 56px) - var(--bottom-tabs-h, 0px))",
-        }}
-      >
-        <div className="relative w-full h-full overflow-hidden">
+    <main
+      ref={containerRef}
+      tabIndex={0}
+      className="flex-1 overflow-y-auto no-scrollbar overscroll-none [scroll-snap-type:y_mandatory] [--feed-top:56px]"
+      style={{
+        height:
+          "calc(var(--app-vh, 100dvh) - var(--feed-top, 56px) - var(--bottom-tabs-h, 0px))",
+        WebkitOverflowScrolling: "touch",
+      }}
+    >
+      <div className="mx-auto w-full max-w-[700px] sm:px-3">
+        {items.map((p, i) => (
           <div
-            ref={scrollerRef}
-            className="absolute inset-0 w-full h-full overflow-y-auto no-scrollbar [scroll-snap-type:y_mandatory]"
+            key={`${p.id}-${i}`}
             style={{
-              WebkitOverflowScrolling: "touch",
+              height: containerH || "100%",
+              // Reduce paint costs for offscreen slides
+              contain: "layout paint size style",
+              contentVisibility: "auto",
+              scrollSnapAlign: "start",
             }}
+            className="[scroll-snap-stop:always]"
+            data-index={i}
+            ref={(el) => (slideElsRef.current[i] = el)}
           >
-            {items.map((p, i) => (
-              <div
-                key={`${p.id}-${i}`}
-                style={{
-                  height: containerH || "100%",
-                  // Reduce paint costs for offscreen slides
-                  contain: "layout paint size style",
-                  contentVisibility: "auto",
-                  scrollSnapAlign: "start",
-                }}
-                className="[scroll-snap-stop:always]"
-                data-index={i}
-                ref={(el) => (slideElsRef.current[i] = el)}
-              >
-                {(() => {
-                  const preloadNext = i > index && i <= index + PRELOAD_AHEAD;
-                  const preloadPrev = i < index && i >= index - PRELOAD_BEHIND;
-                  const shouldPreload = preloadNext || preloadPrev;
-                  // Only render nearby cards to cut DOM/paint cost
-                  const inRenderWindow =
-                    i >= index - 1 - PRELOAD_BEHIND &&
-                    i <= index + 1 + PRELOAD_AHEAD;
-                  return inRenderWindow ? (
-                    <VideoCard
-                      post={p}
-                      isActive={i === index}
-                      shouldPreload={shouldPreload}
-                      preloadSeconds={PRELOAD_SECONDS}
-                      isDragging={isDragging}
-                    />
-                  ) : null;
-                })()}
-              </div>
-            ))}
-            {items.length === 0 && (
-              <div
-                className="flex items-center justify-center w-full"
-                style={{ height: containerH || "100%" }}
-              >
-                <div className="text-center text-white/70">
-                  {error ? (
-                    <div className="space-y-2">
-                      <p>Failed to load feed.</p>
-                      <button
-                        className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold hover:opacity-90"
-                        onClick={() => refetch()}
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  ) : (
-                    <p>{loading ? "Loading…" : "No posts yet."}</p>
-                  )}
-                </div>
-              </div>
-            )}
+            {(() => {
+              const preloadNext = i > index && i <= index + PRELOAD_AHEAD;
+              const preloadPrev = i < index && i >= index - PRELOAD_BEHIND;
+              const shouldPreload = preloadNext || preloadPrev;
+              // Only render nearby cards to cut DOM/paint cost
+              const inRenderWindow =
+                i >= index - 1 - PRELOAD_BEHIND && i <= index + 1 + PRELOAD_AHEAD;
+              return inRenderWindow ? (
+                <VideoCard
+                  post={p}
+                  isActive={i === index}
+                  shouldPreload={shouldPreload}
+                  preloadSeconds={PRELOAD_SECONDS}
+                  isDragging={isDragging}
+                />
+              ) : null;
+            })()}
           </div>
-        </div>
+        ))}
+        {items.length === 0 && (
+          <div
+            className="flex items-center justify-center w-full"
+            style={{ height: containerH || "100%" }}
+          >
+            <div className="text-center text-white/70">
+              {error ? (
+                <div className="space-y-2">
+                  <p>Failed to load feed.</p>
+                  <button
+                    className="px-3 py-1.5 rounded-lg bg-white text-black font-semibold hover:opacity-90"
+                    onClick={() => refetch()}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <p>{loading ? "Loading…" : "No posts yet."}</p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
