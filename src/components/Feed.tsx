@@ -287,7 +287,9 @@ export default function Feed() {
             }}
             className="[scroll-snap-stop:always]"
             data-index={i}
-            ref={(el) => (slideElsRef.current[i] = el)}
+            ref={(el) => {
+              slideElsRef.current[i] = el;
+            }}
           >
             {(() => {
               const preloadNext = i > index && i <= index + PRELOAD_AHEAD;
