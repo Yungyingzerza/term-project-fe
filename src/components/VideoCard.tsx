@@ -12,12 +12,12 @@ export default function VideoCard({
   isActive = false,
   shouldPreload = false,
   preloadSeconds = 5,
+  isDragging = false,
 }: VideoCardProps) {
   const dispatch = useDispatch();
   const muted = (useSelector((s: any) => s.player.muted) &&
     isActive) as boolean;
   const [playing, setPlaying] = useState<boolean>(true);
-  const [progress, setProgress] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const bgVideoRef = useRef<HTMLVideoElement | null>(null);
   const prevActiveRef = useRef<boolean>(isActive);
@@ -28,6 +28,8 @@ export default function VideoCard({
   const shouldLoad = isActive || shouldPreload;
   const preloadDoneRef = useRef<boolean>(false);
   const isActiveRef = useRef<boolean>(isActive);
+  const progressInnerRef = useRef<HTMLDivElement | null>(null);
+  const lastProgressRef = useRef<number>(0);
 
   // Track latest isActive in a ref to avoid stale closures in event handlers
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function VideoCard({
 
   // When becoming active, ensure playhead starts from 0 even if preloading advanced it
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive || isDragging) return;
     const v = videoRef.current;
     if (!v) return;
     try {
@@ -100,7 +102,7 @@ export default function VideoCard({
     const bg = bgVideoRef.current as HTMLVideoElement | null;
 
     // If we are not loading or not active, prefer poster and clear any linked stream
-    if (!shouldLoad || !isActive) {
+    if (!shouldLoad || !isActive || isDragging) {
       setUsePosterBg(true);
       try {
         if (bg && (bg as any).srcObject) (bg as any).srcObject = null;
@@ -153,12 +155,14 @@ export default function VideoCard({
         } catch {}
       }
     };
-  }, [post.videoSrc, shouldLoad, isActive]);
+  }, [post.videoSrc, shouldLoad, isActive, isDragging]);
 
   useEffect(() => {
     const v = videoRef.current;
     const bg = bgVideoRef.current;
     if (!v) return;
+
+    let rafId: number | null = null;
     const syncBgTime = () => {
       const b = bgVideoRef.current;
       if (!b || (b as any).srcObject || !v || !isFinite(v.currentTime)) return;
@@ -170,7 +174,17 @@ export default function VideoCard({
     };
     const onTime = () => {
       const ratio = v.duration ? v.currentTime / v.duration : 0;
-      setProgress(Math.max(0, Math.min(1, ratio)));
+      const clamped = Math.max(0, Math.min(1, ratio));
+      const el = progressInnerRef.current;
+      if (el) {
+        if (rafId == null) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            el.style.transform = `scaleX(${clamped})`;
+            lastProgressRef.current = clamped;
+          });
+        }
+      }
       syncBgTime();
     };
     const onSeeked = () => syncBgTime();
@@ -181,6 +195,7 @@ export default function VideoCard({
     v.addEventListener("seeked", onSeeked);
     bg?.addEventListener("loadedmetadata", onBgLoaded);
     return () => {
+      if (rafId != null) cancelAnimationFrame(rafId);
       v.removeEventListener("timeupdate", onTime);
       v.removeEventListener("loadedmetadata", onTime);
       v.removeEventListener("seeked", onSeeked);
@@ -352,8 +367,8 @@ export default function VideoCard({
     const onReady = () => sample();
     v.addEventListener("loadeddata", onReady);
     v.addEventListener("loadedmetadata", onReady);
-    // Throttle to about once per 800ms for smooth fade and perf
-    const id = window.setInterval(sample, 800);
+    // Throttle to about once per 1500ms for perf
+    const id = window.setInterval(sample, 1500);
 
     // Also sample when playhead is scrubbed noticeably
     const onSeeked = () => sample();
@@ -365,22 +380,22 @@ export default function VideoCard({
       v.removeEventListener("seeked", onSeeked);
       window.clearInterval(id);
     };
-  }, [isActive, dispatch]);
+  }, [isActive, isDragging, dispatch]);
 
   return (
     <article className="relative w-full h-full sm:rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
       {/* Blurred video background to avoid black bars while preserving aspect ratio */}
       <div
         aria-hidden
-        className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover blur-2xl scale-110 pointer-events-none ${
+        className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover scale-110 pointer-events-none ${
           usePosterBg ? "" : "hidden"
-        }`}
+        } ${isActive && !isDragging ? "blur-xl" : ""}`}
         style={{ backgroundImage: `url(${post.thumbnail})` }}
       />
       <video
         ref={bgVideoRef}
-        className={`absolute inset-0 z-0 w-full h-full object-cover blur-2xl scale-110 pointer-events-none ${
-          usePosterBg ? "hidden" : ""
+        className={`absolute inset-0 z-0 w-full h-full object-cover scale-110 pointer-events-none ${
+          usePosterBg || isDragging ? "hidden" : "blur-xl" 
         }`}
         crossOrigin="anonymous"
         playsInline
@@ -462,10 +477,11 @@ export default function VideoCard({
       />
       <MusicTicker text={post.music} />
 
-      <div className="absolute left-0 right-0 bottom-0 h-1.5 bg-white/10 z-30">
+      <div className="absolute left-0 right-0 bottom-0 h-1.5 bg-white/10 z-30 overflow-hidden">
         <div
-          className="h-full bg-white/80"
-          style={{ width: `${Math.round(progress * 100)}%` }}
+          ref={progressInnerRef}
+          className="h-full bg-white/80 will-change-transform origin-left"
+          style={{ transform: "scaleX(0)" }}
         />
       </div>
     </article>

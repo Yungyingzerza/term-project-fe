@@ -23,6 +23,14 @@
   /* Avoid layout jump when scrollbars appear */
   scrollbar-gutter: stable both-edges;
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Safari/Chrome */
+}
 .scroll-smoothbar::-webkit-scrollbar {
   width: 10px;
   height: 10px;

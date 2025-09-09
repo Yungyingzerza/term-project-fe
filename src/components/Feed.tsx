@@ -24,14 +24,20 @@ export default function Feed() {
   const [index, setIndex] = useState<number>(0);
   const [offset, setOffset] = useState<number>(0);
   const [isAnimating, setIsAnimating] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const animMs = 320;
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const slideElsRef = useRef<(HTMLDivElement | null)[]>([]);
   const touchStartY = useRef<number | null>(null);
   const lastSnapAtRef = useRef<number>(0);
   const [containerH, setContainerH] = useState<number>(0);
   const ignoreSwipeRef = useRef<boolean>(false);
   const [PRELOAD_AHEAD, setPRELOAD_AHEAD] = useState<number>(0);
   const prefetchIndexRef = useRef<number | null>(null);
+  const gestureOffsetRef = useRef<number>(0);
+  const rafIdRef = useRef<number | null>(null);
+  const scrollStopTimerRef = useRef<number | null>(null);
 
   // Keep hook algo in sync with route changes
   useEffect(() => {
@@ -78,6 +84,30 @@ export default function Feed() {
     // Trigger download
     image.src = `${imageUrl}?cacheBust=${Math.random()}`;
   }, []);
+
+  // Native scroll-snap: observe which slide is mostly visible to set active index
+  useEffect(() => {
+    const root = scrollerRef.current;
+    if (!root) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        let next: number | null = null;
+        for (const e of entries) {
+          const el = e.target as HTMLElement;
+          const idxStr = el.getAttribute("data-index");
+          if (!idxStr) continue;
+          const idx = parseInt(idxStr, 10);
+          if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+            next = idx;
+          }
+        }
+        if (next != null && next !== index) setIndex(next);
+      },
+      { root, threshold: [0.55] }
+    );
+    slideElsRef.current.forEach((el) => el && io.observe(el));
+    return () => io.disconnect();
+  }, [index, items.length]);
 
   // Robust mobile viewport handling: prefer 100dvh when supported, otherwise
   // fall back to the real visible viewport height in pixels.
@@ -173,159 +203,46 @@ export default function Feed() {
     return Math.max(80, Math.min(240, Math.round(h * 0.25)));
   };
 
+  // Native scroll: set dragging on scroll, clear shortly after it settles
   useEffect(() => {
-    const animateSnap = (dir: number) => {
-      const target = index + dir;
-      if (target < 0 || target > items.length - 1) {
-        // bounce back at edges
-        setOffset(0);
-        return;
+    const el = scrollerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (!isDragging) setIsDragging(true);
+      if (scrollStopTimerRef.current != null) {
+        window.clearTimeout(scrollStopTimerRef.current);
       }
-      setIsAnimating(true);
-      setOffset(
-        dir *
-          (containerH ||
-            containerRef.current?.getBoundingClientRect().height ||
-            0)
-      );
-      window.setTimeout(() => {
-        setIndex(target);
-        setOffset(0);
-        setIsAnimating(false);
-      }, animMs);
+      scrollStopTimerRef.current = window.setTimeout(() => {
+        setIsDragging(false);
+        scrollStopTimerRef.current = null;
+      }, 120);
     };
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      if (isAnimating) return;
-
-      // Cooldown to prevent double-skip on high-res touchpads
-      const now = performance.now();
-      const cooldownMs = 600; // extend cooldown to avoid double-skip on long gestures
-      if (now - lastSnapAtRef.current < cooldownMs) return;
-
-      // Normalize delta to pixels and require a minimal per-event threshold
-      const unit =
-        e.deltaMode === 1
-          ? 16
-          : e.deltaMode === 2
-          ? containerH ||
-            containerRef.current?.getBoundingClientRect().height ||
-            1
-          : 1;
-      const deltaPx = e.deltaY * unit;
-
-      const minEventPx = 28; // require deliberate motion on touchpads
-      if (Math.abs(deltaPx) < minEventPx) return;
-
-      const dir = deltaPx > 0 ? 1 : -1;
-      animateSnap(dir);
-      lastSnapAtRef.current = now;
-    };
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    return () =>
-      window.removeEventListener("wheel", handleWheel as EventListener);
-  }, [index, isAnimating, containerH, items.length]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const targetEl = e.target as HTMLElement | null;
-      if (
-        targetEl &&
-        (targetEl.isContentEditable ||
-          ["input", "textarea", "select"].includes(
-            targetEl.tagName.toLowerCase()
-          ))
-      ) {
-        return;
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      el.removeEventListener("scroll", onScroll as EventListener);
+      if (scrollStopTimerRef.current != null) {
+        window.clearTimeout(scrollStopTimerRef.current);
+        scrollStopTimerRef.current = null;
       }
-      if (isAnimating) return;
-      const down = e.key === "ArrowDown" || e.key === "PageDown";
-      const up = e.key === "ArrowUp" || e.key === "PageUp";
-      if (!down && !up) return;
-      e.preventDefault();
-      const dir = down ? 1 : -1;
-      const target = index + dir;
-      if (target < 0 || target > items.length - 1) return;
-      setIsAnimating(true);
-      setOffset(
-        dir *
-          (containerH ||
-            containerRef.current?.getBoundingClientRect().height ||
-            0)
-      );
-      window.setTimeout(() => {
-        setIndex(target);
-        setOffset(0);
-        setIsAnimating(false);
-      }, animMs);
     };
-    window.addEventListener("keydown", handleKeyDown, { passive: false });
-    return () =>
-      window.removeEventListener("keydown", handleKeyDown as EventListener);
-  }, [index, isAnimating, containerH, items.length]);
+  }, [isDragging]);
+
+  // Keyboard snapping removed for native scroll mode
 
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
       ignoreSwipeRef.current = isInteractiveTarget(e.target);
       if (ignoreSwipeRef.current) return;
-      touchStartY.current = e.touches[0]?.clientY ?? null;
+      setIsDragging(true);
     };
-    const onTouchMove = (e: TouchEvent) => {
-      if (ignoreSwipeRef.current) return;
-      if (touchStartY.current == null) return;
-      e.preventDefault();
-      const y = e.touches[0]?.clientY ?? touchStartY.current;
-      const dy = touchStartY.current - y;
-      const factor = 0.7;
-      let nextOffset = dy * factor;
-      setOffset(nextOffset);
-    };
-    const onTouchEnd = (e: TouchEvent) => {
-      if (ignoreSwipeRef.current) {
-        // Reset and ignore this gesture for feed navigation
-        ignoreSwipeRef.current = false;
-        touchStartY.current = null;
-        return;
-      }
-      if (touchStartY.current == null) return;
-      const endY = e.changedTouches[0]?.clientY ?? touchStartY.current;
-      const dy = touchStartY.current - endY;
-      touchStartY.current = null;
-      if (isAnimating) return;
-      const th = getThreshold();
-      const dir = dy > th ? 1 : dy < -th ? -1 : 0;
-      if (dir === 0) {
-        setOffset(0);
-        return;
-      }
-      const target = index + dir;
-      if (target < 0 || target > items.length - 1) {
-        setOffset(0);
-        return;
-      }
-      setIsAnimating(true);
-      setOffset(
-        dir *
-          (containerH ||
-            containerRef.current?.getBoundingClientRect().height ||
-            0)
-      );
-      window.setTimeout(() => {
-        setIndex(target);
-        setOffset(0);
-        setIsAnimating(false);
-      }, animMs);
-    };
-    window.addEventListener("touchstart", onTouchStart, { passive: false });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
-    window.addEventListener("touchend", onTouchEnd, { passive: false });
+    const onTouchEnd = () => setIsDragging(false);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
       window.removeEventListener("touchstart", onTouchStart as EventListener);
-      window.removeEventListener("touchmove", onTouchMove as EventListener);
       window.removeEventListener("touchend", onTouchEnd as EventListener);
     };
-  }, [index, isAnimating, containerH, items.length]);
+  }, []);
 
   useEffect(() => {
     setOffset(0);
@@ -370,32 +287,43 @@ export default function Feed() {
       >
         <div className="relative w-full h-full overflow-hidden">
           <div
-            className="absolute inset-0 will-change-transform"
+            ref={scrollerRef}
+            className="absolute inset-0 w-full h-full overflow-y-auto no-scrollbar [scroll-snap-type:y_mandatory]"
             style={{
-              transform:
-                containerH > 0
-                  ? `translateY(-${index * containerH + offset}px)`
-                  : `translateY(0)`,
-              transition: isAnimating ? `transform ${animMs}ms ease` : "none",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             {items.map((p, i) => (
               <div
                 key={`${p.id}-${i}`}
-                style={{ height: containerH || "100%" }}
+                style={{
+                  height: containerH || "100%",
+                  // Reduce paint costs for offscreen slides
+                  contain: "layout paint size style",
+                  contentVisibility: "auto",
+                  scrollSnapAlign: "start",
+                }}
+                className="[scroll-snap-stop:always]"
+                data-index={i}
+                ref={(el) => (slideElsRef.current[i] = el)}
               >
                 {(() => {
                   const preloadNext = i > index && i <= index + PRELOAD_AHEAD;
                   const preloadPrev = i < index && i >= index - PRELOAD_BEHIND;
                   const shouldPreload = preloadNext || preloadPrev;
-                  return (
+                  // Only render nearby cards to cut DOM/paint cost
+                  const inRenderWindow =
+                    i >= index - 1 - PRELOAD_BEHIND &&
+                    i <= index + 1 + PRELOAD_AHEAD;
+                  return inRenderWindow ? (
                     <VideoCard
                       post={p}
                       isActive={i === index}
                       shouldPreload={shouldPreload}
                       preloadSeconds={PRELOAD_SECONDS}
+                      isDragging={isDragging}
                     />
-                  );
+                  ) : null;
                 })()}
               </div>
             ))}
