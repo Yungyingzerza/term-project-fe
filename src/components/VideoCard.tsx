@@ -23,6 +23,8 @@ export default function VideoCard({
   const samplerCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastSentColorRef = useRef<string | null>(null);
   const [usePosterBg, setUsePosterBg] = useState<boolean>(false);
+  const [videoReady, setVideoReady] = useState<boolean>(false);
+  const [bgReady, setBgReady] = useState<boolean>(false);
   // Only load the active card's video, but allow light preload for next card
   const shouldLoad = isActive || shouldPreload;
   const preloadDoneRef = useRef<boolean>(false);
@@ -38,6 +40,9 @@ export default function VideoCard({
   // Reset preload state when the source changes
   useEffect(() => {
     preloadDoneRef.current = false;
+    setVideoReady(false);
+    setBgReady(false);
+    setUsePosterBg(true);
   }, [post.videoSrc]);
 
   useEffect(() => {
@@ -103,6 +108,7 @@ export default function VideoCard({
     // If we are not loading or not active, prefer poster and clear any linked stream
     if (!shouldLoad || !isActive) {
       setUsePosterBg(true);
+      setBgReady(false);
       try {
         if (bg && (bg as any).srcObject) (bg as any).srcObject = null;
       } catch {}
@@ -115,10 +121,17 @@ export default function VideoCard({
       typeof (v as any).mozCaptureStream === "function";
     if (!supportsCapture) {
       setUsePosterBg(true);
+      setBgReady(false);
       return;
     }
 
     let cancelled = false;
+    const onBgCanShow = () => {
+      if (cancelled) return;
+      setBgReady(true);
+      setUsePosterBg(false);
+    };
+
     const link = () => {
       if (cancelled) return;
       const bgEl = bgVideoRef.current as any;
@@ -129,7 +142,19 @@ export default function VideoCard({
         if (stream) {
           try {
             bgEl.srcObject = stream;
-            setUsePosterBg(false);
+            // Wait until background video is actually able to render frames
+            // before hiding the poster blur, to avoid a flash of black.
+            const bgVideo = bgVideoRef.current;
+            if (bgVideo) {
+              // If already has current data, reveal immediately
+              if (bgVideo.readyState >= 2) {
+                onBgCanShow();
+              } else {
+                bgVideo.addEventListener("loadeddata", onBgCanShow);
+                bgVideo.addEventListener("canplay", onBgCanShow);
+                bgVideo.addEventListener("playing", onBgCanShow);
+              }
+            }
           } catch {
             setUsePosterBg(true);
           }
@@ -152,6 +177,9 @@ export default function VideoCard({
         try {
           b.srcObject = null;
         } catch {}
+        b.removeEventListener("loadeddata", onBgCanShow as EventListener);
+        b.removeEventListener("canplay", onBgCanShow as EventListener);
+        b.removeEventListener("playing", onBgCanShow as EventListener);
       }
     };
   }, [post.videoSrc, shouldLoad, isActive]);
@@ -201,6 +229,35 @@ export default function VideoCard({
       bg?.removeEventListener("loadedmetadata", onBgLoaded);
     };
   }, [usePosterBg]);
+
+  // Track when the primary video is actually ready to render frames.
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    const markReady = () => setVideoReady(true);
+    const resetReady = () => setVideoReady(false);
+
+    // If it already has data (e.g., preloaded), mark ready.
+    if (v.readyState >= 2) setVideoReady(true);
+    else setVideoReady(false);
+
+    v.addEventListener("loadeddata", markReady);
+    v.addEventListener("canplay", markReady);
+    v.addEventListener("playing", markReady);
+    v.addEventListener("emptied", resetReady);
+    v.addEventListener("abort", resetReady);
+    v.addEventListener("error", resetReady);
+
+    return () => {
+      v.removeEventListener("loadeddata", markReady);
+      v.removeEventListener("canplay", markReady);
+      v.removeEventListener("playing", markReady);
+      v.removeEventListener("emptied", resetReady);
+      v.removeEventListener("abort", resetReady);
+      v.removeEventListener("error", resetReady);
+    };
+  }, [post.videoSrc]);
 
   // When card becomes inactive and not preloading, ensure it stops and unloads
   useEffect(() => {
@@ -384,17 +441,18 @@ export default function VideoCard({
   return (
     <article className="relative w-full h-full sm:rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
       {/* Blurred video background to avoid black bars while preserving aspect ratio */}
+      {/* Show blurred poster while background not ready, unsupported, or main video not ready */}
       <div
         aria-hidden
         className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover scale-110 pointer-events-none ${
-          usePosterBg ? "" : "hidden"
+          usePosterBg || !videoReady ? "" : "hidden"
         } blur-2xl`}
         style={{ backgroundImage: `url(${post.thumbnail})` }}
       />
       <video
         ref={bgVideoRef}
         className={`absolute inset-0 z-0 w-full h-full object-cover scale-110 pointer-events-none ${
-          usePosterBg ? "hidden" : "blur-2xl"
+          usePosterBg || !videoReady ? "hidden" : "blur-2xl"
         }`}
         crossOrigin="anonymous"
         playsInline
@@ -403,6 +461,14 @@ export default function VideoCard({
         autoPlay={isActive && playing}
         aria-hidden
       />
+      {/* Crisp poster overlay for main video until it’s ready */}
+      {!videoReady && (
+        <img
+          aria-hidden
+          className="absolute inset-0 z-20 w-full h-full object-contain pointer-events-none"
+          src={post.thumbnail}
+        />
+      )}
       <video
         ref={videoRef}
         className="relative z-10 object-contain w-full h-full"
