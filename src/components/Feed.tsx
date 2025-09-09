@@ -244,7 +244,8 @@ export default function Feed() {
     if (!hasMore) return;
     // When within 1 from the end (accounting for preload), fetch next page.
     // Guard to only trigger once per index value to avoid spamming.
-    const nearEnd = items.length > 0 && index >= items.length - 1 - PRELOAD_AHEAD;
+    const nearEnd =
+      items.length > 0 && index >= items.length - 1 - PRELOAD_AHEAD;
     if (nearEnd && prefetchIndexRef.current !== index) {
       prefetchIndexRef.current = index;
       void fetchNext();
@@ -294,14 +295,14 @@ export default function Feed() {
               const shouldPreload = preloadNext || preloadPrev;
               // Only render nearby cards to cut DOM/paint cost
               const inRenderWindow =
-                i >= index - 1 - PRELOAD_BEHIND && i <= index + 1 + PRELOAD_AHEAD;
+                i >= index - 1 - PRELOAD_BEHIND &&
+                i <= index + 1 + PRELOAD_AHEAD;
               return inRenderWindow ? (
                 <VideoCard
                   post={p}
                   isActive={i === index}
                   shouldPreload={shouldPreload}
                   preloadSeconds={PRELOAD_SECONDS}
-                  isDragging={isDragging}
                 />
               ) : null;
             })()}

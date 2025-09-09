@@ -12,7 +12,6 @@ export default function VideoCard({
   isActive = false,
   shouldPreload = false,
   preloadSeconds = 5,
-  isDragging = false,
 }: VideoCardProps) {
   const dispatch = useDispatch();
   const muted = (useSelector((s: any) => s.player.muted) &&
@@ -52,7 +51,7 @@ export default function VideoCard({
 
   // When becoming active, ensure playhead starts from 0 even if preloading advanced it
   useEffect(() => {
-    if (!isActive || isDragging) return;
+    if (!isActive) return;
     const v = videoRef.current;
     if (!v) return;
     try {
@@ -102,7 +101,7 @@ export default function VideoCard({
     const bg = bgVideoRef.current as HTMLVideoElement | null;
 
     // If we are not loading or not active, prefer poster and clear any linked stream
-    if (!shouldLoad || !isActive || isDragging) {
+    if (!shouldLoad || !isActive) {
       setUsePosterBg(true);
       try {
         if (bg && (bg as any).srcObject) (bg as any).srcObject = null;
@@ -155,7 +154,7 @@ export default function VideoCard({
         } catch {}
       }
     };
-  }, [post.videoSrc, shouldLoad, isActive, isDragging]);
+  }, [post.videoSrc, shouldLoad, isActive]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -380,7 +379,7 @@ export default function VideoCard({
       v.removeEventListener("seeked", onSeeked);
       window.clearInterval(id);
     };
-  }, [isActive, isDragging, dispatch]);
+  }, [isActive, dispatch]);
 
   return (
     <article className="relative w-full h-full sm:rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
@@ -389,13 +388,13 @@ export default function VideoCard({
         aria-hidden
         className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover scale-110 pointer-events-none ${
           usePosterBg ? "" : "hidden"
-        } ${isActive && !isDragging ? "blur-xl" : ""}`}
+        } blur-2xl`}
         style={{ backgroundImage: `url(${post.thumbnail})` }}
       />
       <video
         ref={bgVideoRef}
         className={`absolute inset-0 z-0 w-full h-full object-cover scale-110 pointer-events-none ${
-          usePosterBg || isDragging ? "hidden" : "blur-xl" 
+          usePosterBg ? "hidden" : "blur-2xl"
         }`}
         crossOrigin="anonymous"
         playsInline

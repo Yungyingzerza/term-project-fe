@@ -5,5 +5,4 @@ export interface VideoCardProps {
   isActive?: boolean;
   shouldPreload?: boolean;
   preloadSeconds?: number; // approximate warm buffer duration when preloading
-  isDragging?: boolean; // hint to reduce effects during gestures
 }
