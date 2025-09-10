@@ -1,7 +1,7 @@
 "use client";
 import { User, Compass, Home, Plus, MessageCircle } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setAmbientColor } from "@/store/playerSlice";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -11,16 +11,30 @@ function classNames(...arr: Array<string | false | null | undefined>) {
 
 export default function BottomTabs() {
   const navigate = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const pathname = usePathname();
   const navRef = useRef<HTMLElement | null>(null);
-  const tabs = [
+  const user = useAppSelector((s) => s.user);
+  const isLoggedIn = !!(user?.id || user?.username);
+  const tabsBase = [
     { icon: Home, label: "Home", link: "/" },
     { icon: Compass, label: "Explore", link: "/explore" },
     { icon: Plus, label: "Create", link: "/upload" },
     { icon: MessageCircle, label: "Messages", link: "/messages" },
     { icon: User, label: "Profile", link: "/profile" },
   ];
+  const tabs = isLoggedIn
+    ? tabsBase
+    : [
+        { icon: Home, label: "Home", link: "/" },
+        { icon: Compass, label: "Explore", link: "/explore" },
+        {
+          icon: User,
+          label: "Login",
+          link: `${process.env.NEXT_PUBLIC_BASE_API || ""}/line/authentication`,
+          external: true as const,
+        },
+      ];
   useEffect(() => {
     const applyHeight = () => {
       const nav = navRef.current;
@@ -67,7 +81,7 @@ export default function BottomTabs() {
       className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-white/10 bg-neutral-950/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
     >
       <div className="flex justify-around items-center py-2">
-        {tabs.map(({ icon: Icon, label, link }) => {
+        {tabs.map(({ icon: Icon, label, link, external }) => {
           const isActive =
             link === "/"
               ? pathname === "/" || pathname.startsWith("/following") || pathname.startsWith("/live")
@@ -75,7 +89,18 @@ export default function BottomTabs() {
           return (
           <button
             key={label}
-            onClick={() => handleNavigation(link)}
+            onClick={() => {
+              if (external) {
+                try {
+                  window.location.href = link;
+                } catch {
+                  // fallback: navigate to profile (middleware will redirect)
+                  handleNavigation("/profile");
+                }
+              } else {
+                handleNavigation(link);
+              }
+            }}
             className="flex flex-col items-center gap-0.5 text-[11px]"
           >
             <Icon className={classNames("w-5 h-5", isActive && "text-white")} />

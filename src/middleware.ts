@@ -85,7 +85,7 @@ export async function middleware(req: NextRequest) {
         new TextEncoder().encode(process.env.JWT_SECRET)
       );
 
-      if (payload && payload.id) {
+      if (payload && payload.sub) {
         isAuth = true;
       }
     } catch {
@@ -100,7 +100,7 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  const protectedRoutes = ["/booking", "/profile"];
+  const protectedRoutes = ["/profile"];
 
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -116,5 +116,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/booking/:path*", "/profile/:path*"],
+  matcher: ["/", "/profile/:path*"],
 };

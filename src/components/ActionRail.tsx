@@ -3,6 +3,7 @@ import { Bookmark, MessageCircle, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ActionRailProps, Interactions, ReactionKey } from "@/interfaces";
 import ReactionIcon from "./ReactionIcon";
+import { useAppSelector } from "@/store/hooks";
 
 // UX timing constants (ms)
 const LONG_PRESS_DELAY_MS = 500; // time to press-and-hold before opening picker
@@ -38,6 +39,8 @@ export default function ActionRail({
   comments,
   saves,
 }: ActionRailProps) {
+  const user = useAppSelector((s) => s.user);
+  const isLoggedIn = !!(user?.id || user?.username);
   const [reaction, setReaction] = useState<ReactionKey | null>(null);
   const [counts, setCounts] = useState<Interactions>(interactions);
   const [saved, setSaved] = useState(false);
@@ -170,165 +173,12 @@ export default function ActionRail({
 
   return (
     <div className="absolute right-2 sm:right-4 bottom-24 sm:bottom-6 flex flex-col items-center gap-4 z-30 touch-none">
-      <div
-        className="relative"
-        onMouseEnter={() => {
-          if (!canHoverRef.current) return;
-          if (closeTimer.current) window.clearTimeout(closeTimer.current);
-        }}
-        onMouseLeave={() => {
-          if (closeTimer.current) window.clearTimeout(closeTimer.current);
-          closeTimer.current = window.setTimeout(
-            () => setPickerOpen(false),
-            PICKER_CLOSE_DELAY_MS
-          );
-        }}
-        onTouchStart={(e) => {
-          // Record where the gesture started; used to avoid suppressing future taps
-          // when the user drags into the picker.
-          touchStartedOnMainRef.current = true;
-          movedOffMainRef.current = false;
-        }}
-        onTouchMove={(e) => {
-          if (!longPressedRef.current) return;
-          const t = e.touches && e.touches[0];
-          if (!t) return;
-          const el = document.elementFromPoint(
-            t.clientX,
-            t.clientY
-          ) as HTMLElement | null;
-          const btn = el?.closest(
-            "button[data-reaction]"
-          ) as HTMLElement | null;
-          const key = (btn?.dataset?.reaction || null) as ReactionKey | null;
-          if (hoveredKeyRef.current !== key) {
-            hoveredKeyRef.current = key;
-            setHoveredKey(key);
-          }
-          if (key) movedOffMainRef.current = true;
-        }}
-        onTouchEnd={(e) => {
-          if (!longPressedRef.current) return;
-          e.preventDefault();
-          e.stopPropagation();
-          const key = hoveredKeyRef.current;
-          if (key) {
-            choose(key);
-          } else {
-            setPickerOpen(false);
-          }
-          hoveredKeyRef.current = null;
-          setHoveredKey(null);
-          longPressedRef.current = false;
-          // Suppress the synthetic click only if the long-press ended on the main button
-          // (no drag into the picker). If the user dragged to the picker to select,
-          // don't suppress the next tap on the main button.
-          suppressClickRef.current =
-            touchStartedOnMainRef.current && !movedOffMainRef.current;
-          touchStartedOnMainRef.current = false;
-          movedOffMainRef.current = false;
-        }}
-        onTouchCancel={() => {
-          if (!longPressedRef.current) return;
-          hoveredKeyRef.current = null;
-          setHoveredKey(null);
-          longPressedRef.current = false;
-          setPickerOpen(false);
-          touchStartedOnMainRef.current = false;
-          movedOffMainRef.current = false;
-        }}
-      >
-        {/* Main reaction button */}
-        <button
-          onClick={handleMainClick}
-          onMouseDown={startLongPress}
-          onMouseUp={cancelLongPress}
-          onMouseLeave={cancelLongPress}
-          onTouchStart={startLongPress}
-          onTouchEnd={cancelLongPress}
-          onTouchCancel={cancelLongPress}
-          onKeyDown={(e) => {
-            if (e.key === " " || e.key === "Enter") {
-              e.preventDefault();
-              handleMainClick();
-            } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-              e.preventDefault();
-              const keys = REACTIONS.map((r) => r.key);
-              const curr = reaction || displayedKey;
-              const idx = keys.indexOf(curr);
-              const nextIdx =
-                e.key === "ArrowRight"
-                  ? (idx + 1) % keys.length
-                  : (idx - 1 + keys.length) % keys.length;
-              setPickerOpen(true);
-              cycleTo(keys[nextIdx]);
-            } else if (e.key === "Escape") {
-              setPickerOpen(false);
-            }
-          }}
-          className={classNames(
-            "group grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60 select-none",
-            reaction &&
-              `ring-2 ${REACTIONS.find((r) => r.key === reaction)?.ring}`
-          )}
-          aria-label={
-            reaction
-              ? REACTIONS.find((r) => r.key === reaction)?.label
-              : "React"
-          }
-          title={
-            reaction
-              ? `${
-                  REACTIONS.find((r) => r.key === reaction)!.label
-                } • Click to remove • Hold to choose`
-              : `React • Click to Like • Hold to choose`
-          }
-          onMouseEnter={() => {
-            if (!canHoverRef.current) return;
-            if (closeTimer.current) window.clearTimeout(closeTimer.current);
-            setPickerOpen(true);
-          }}
-        >
-          <span className="relative inline-grid place-items-center">
-            {/* Burst when selecting */}
-            {burst && (
-              <span
-                key={burst.at}
-                className="absolute -z-10 h-12 w-12 rounded-full opacity-40"
-                style={{
-                  backgroundColor: burst.color,
-                  animation: `burst ${BURST_ANIM_MS}ms ease-out 1`,
-                }}
-                onAnimationEnd={() => setBurst(null)}
-              />
-            )}
-            {/* Glow */}
-            <span
-              className={classNames(
-                "absolute -z-10 h-8 w-8 rounded-full blur-md transition-all",
-                reaction
-                  ? "opacity-60 scale-100 group-hover:opacity-80 group-hover:scale-110"
-                  : "opacity-0 scale-90"
-              )}
-              style={{
-                backgroundColor: REACTIONS.find(
-                  (r) => r.key === (reaction || displayedKey)
-                )!.accent,
-              }}
-            />
-            <ReactionIcon
-              name={reaction || displayedKey}
-              className="w-6 h-6 text-white transition group-hover:brightness-110"
-            />
-          </span>
-        </button>
-
-        {/* Reactions picker - shows on hover (desktop) or when long-pressed (mobile) */}
+      {isLoggedIn ? (
         <div
+          className="relative"
           onMouseEnter={() => {
             if (!canHoverRef.current) return;
             if (closeTimer.current) window.clearTimeout(closeTimer.current);
-            setPickerOpen(true);
           }}
           onMouseLeave={() => {
             if (closeTimer.current) window.clearTimeout(closeTimer.current);
@@ -337,47 +187,202 @@ export default function ActionRail({
               PICKER_CLOSE_DELAY_MS
             );
           }}
-          className={classNames(
-            "absolute right-full mr-2 bottom-0 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-sm shadow-lg transition-all duration-150",
-            pickerOpen
-              ? "opacity-100 translate-x-0"
-              : "opacity-0 translate-x-1 pointer-events-none"
-          )}
-          role="radiogroup"
-          aria-label="Reactions"
+          onTouchStart={(e) => {
+            // Record where the gesture started; used to avoid suppressing future taps
+            // when the user drags into the picker.
+            touchStartedOnMainRef.current = true;
+            movedOffMainRef.current = false;
+          }}
+          onTouchMove={(e) => {
+            if (!longPressedRef.current) return;
+            const t = e.touches && e.touches[0];
+            if (!t) return;
+            const el = document.elementFromPoint(
+              t.clientX,
+              t.clientY
+            ) as HTMLElement | null;
+            const btn = el?.closest(
+              "button[data-reaction]"
+            ) as HTMLElement | null;
+            const key = (btn?.dataset?.reaction || null) as ReactionKey | null;
+            if (hoveredKeyRef.current !== key) {
+              hoveredKeyRef.current = key;
+              setHoveredKey(key);
+            }
+            if (key) movedOffMainRef.current = true;
+          }}
+          onTouchEnd={(e) => {
+            if (!longPressedRef.current) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const key = hoveredKeyRef.current;
+            if (key) {
+              choose(key);
+            } else {
+              setPickerOpen(false);
+            }
+            hoveredKeyRef.current = null;
+            setHoveredKey(null);
+            longPressedRef.current = false;
+            // Suppress the synthetic click only if the long-press ended on the main button
+            // (no drag into the picker). If the user dragged to the picker to select,
+            // don't suppress the next tap on the main button.
+            suppressClickRef.current =
+              touchStartedOnMainRef.current && !movedOffMainRef.current;
+            touchStartedOnMainRef.current = false;
+            movedOffMainRef.current = false;
+          }}
+          onTouchCancel={() => {
+            if (!longPressedRef.current) return;
+            hoveredKeyRef.current = null;
+            setHoveredKey(null);
+            longPressedRef.current = false;
+            setPickerOpen(false);
+            touchStartedOnMainRef.current = false;
+            movedOffMainRef.current = false;
+          }}
         >
-          {REACTIONS.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => choose(r.key)}
-              className={classNames(
-                "group w-12 h-14 px-1 grid place-items-center rounded-md hover:bg-white/10 hover:ring-2",
-                r.ring,
-                (reaction === r.key || hoveredKey === r.key) && "ring-2"
-              )}
-              aria-label={r.label}
-              title={`${r.label} • ${formatCount(counts[r.key] || 0)}`}
-              data-reaction={r.key}
-              role="radio"
-              aria-checked={reaction === r.key}
-            >
-              <span className="relative inline-grid place-items-center">
+          {/* Main reaction button */}
+          <button
+            onClick={handleMainClick}
+            onMouseDown={startLongPress}
+            onMouseUp={cancelLongPress}
+            onMouseLeave={cancelLongPress}
+            onTouchStart={startLongPress}
+            onTouchEnd={cancelLongPress}
+            onTouchCancel={cancelLongPress}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                handleMainClick();
+              } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                e.preventDefault();
+                const keys = REACTIONS.map((r) => r.key);
+                const curr = reaction || displayedKey;
+                const idx = keys.indexOf(curr);
+                const nextIdx =
+                  e.key === "ArrowRight"
+                    ? (idx + 1) % keys.length
+                    : (idx - 1 + keys.length) % keys.length;
+                setPickerOpen(true);
+                cycleTo(keys[nextIdx]);
+              } else if (e.key === "Escape") {
+                setPickerOpen(false);
+              }
+            }}
+            className={classNames(
+              "group grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60 select-none",
+              reaction &&
+                `ring-2 ${REACTIONS.find((r) => r.key === reaction)?.ring}`
+            )}
+            aria-label={
+              reaction
+                ? REACTIONS.find((r) => r.key === reaction)?.label
+                : "React"
+            }
+            title={
+              reaction
+                ? `${
+                    REACTIONS.find((r) => r.key === reaction)!.label
+                  } • Click to remove • Hold to choose`
+                : `React • Click to Like • Hold to choose`
+            }
+            onMouseEnter={() => {
+              if (!canHoverRef.current) return;
+              if (closeTimer.current) window.clearTimeout(closeTimer.current);
+              setPickerOpen(true);
+            }}
+          >
+            <span className="relative inline-grid place-items-center">
+              {/* Burst when selecting */}
+              {burst && (
                 <span
-                  className="absolute -z-10 h-7 w-7 rounded-full blur-md opacity-0 scale-90 transition-all group-hover:opacity-80 group-hover:scale-110"
-                  style={{ backgroundColor: r.accent }}
+                  key={burst.at}
+                  className="absolute -z-10 h-12 w-12 rounded-full opacity-40"
+                  style={{
+                    backgroundColor: burst.color,
+                    animation: `burst ${BURST_ANIM_MS}ms ease-out 1`,
+                  }}
+                  onAnimationEnd={() => setBurst(null)}
                 />
-                <ReactionIcon
-                  name={r.key}
-                  className="w-5 h-5 text-white transition group-hover:brightness-110"
-                />
-              </span>
-              <span className="text-[10px] leading-[10px] text-white/80 mt-0.5">
-                {formatCount(counts[r.key] || 0)}
-              </span>
-            </button>
-          ))}
+              )}
+              {/* Glow */}
+              <span
+                className={classNames(
+                  "absolute -z-10 h-8 w-8 rounded-full blur-md transition-all",
+                  reaction
+                    ? "opacity-60 scale-100 group-hover:opacity-80 group-hover:scale-110"
+                    : "opacity-0 scale-90"
+                )}
+                style={{
+                  backgroundColor: REACTIONS.find(
+                    (r) => r.key === (reaction || displayedKey)
+                  )!.accent,
+                }}
+              />
+              <ReactionIcon
+                name={reaction || displayedKey}
+                className="w-6 h-6 text-white transition group-hover:brightness-110"
+              />
+            </span>
+          </button>
+
+          {/* Reactions picker - shows on hover (desktop) or when long-pressed (mobile) */}
+          <div
+            onMouseEnter={() => {
+              if (!canHoverRef.current) return;
+              if (closeTimer.current) window.clearTimeout(closeTimer.current);
+              setPickerOpen(true);
+            }}
+            onMouseLeave={() => {
+              if (closeTimer.current) window.clearTimeout(closeTimer.current);
+              closeTimer.current = window.setTimeout(
+                () => setPickerOpen(false),
+                PICKER_CLOSE_DELAY_MS
+              );
+            }}
+            className={classNames(
+              "absolute right-full mr-2 bottom-0 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 border border-white/10 backdrop-blur-sm shadow-lg transition-all duration-150",
+              pickerOpen
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 translate-x-1 pointer-events-none"
+            )}
+            role="radiogroup"
+            aria-label="Reactions"
+          >
+            {REACTIONS.map((r) => (
+              <button
+                key={r.key}
+                onClick={() => choose(r.key)}
+                className={classNames(
+                  "group w-12 h-14 px-1 grid place-items-center rounded-md hover:bg-white/10 hover:ring-2",
+                  r.ring,
+                  (reaction === r.key || hoveredKey === r.key) && "ring-2"
+                )}
+                aria-label={r.label}
+                title={`${r.label} • ${formatCount(counts[r.key] || 0)}`}
+                data-reaction={r.key}
+                role="radio"
+                aria-checked={reaction === r.key}
+              >
+                <span className="relative inline-grid place-items-center">
+                  <span
+                    className="absolute -z-10 h-7 w-7 rounded-full blur-md opacity-0 scale-90 transition-all group-hover:opacity-80 group-hover:scale-110"
+                    style={{ backgroundColor: r.accent }}
+                  />
+                  <ReactionIcon
+                    name={r.key}
+                    className="w-5 h-5 text-white transition group-hover:brightness-110"
+                  />
+                </span>
+                <span className="text-[10px] leading-[10px] text-white/80 mt-0.5">
+                  {formatCount(counts[r.key] || 0)}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
       {/* Compact top reactions summary */}
       <div className="flex items-center gap-1">
         {topReactions.map((t, i) => (
@@ -403,24 +408,32 @@ export default function ActionRail({
         {formatCount(total)}
       </div>
 
-      <button className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
-        <MessageCircle className="w-6 h-6" />
-      </button>
-      <div className="text-xs text-white/80">{formatCount(comments)}</div>
+      {isLoggedIn ? (
+        <>
+          <button className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
+            <MessageCircle className="w-6 h-6" />
+          </button>
+          <div className="text-xs text-white/80">{formatCount(comments)}</div>
+        </>
+      ) : null}
 
-      <button
-        onClick={() => setSaved((v) => !v)}
-        className={classNames(
-          "grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60",
-          saved && "ring-2 ring-white/60"
-        )}
-        aria-label={saved ? "Unsave" : "Save"}
-      >
-        <Bookmark className={classNames("w-6 h-6", saved && "fill-current")} />
-      </button>
-      <div className="text-xs text-white/80">
-        {formatCount(saves + (saved ? 1 : 0))}
-      </div>
+      {isLoggedIn ? (
+        <>
+          <button
+            onClick={() => setSaved((v) => !v)}
+            className={classNames(
+              "grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60",
+              saved && "ring-2 ring-white/60"
+            )}
+            aria-label={saved ? "Unsave" : "Save"}
+          >
+            <Bookmark className={classNames("w-6 h-6", saved && "fill-current")} />
+          </button>
+          <div className="text-xs text-white/80">
+            {formatCount(saves + (saved ? 1 : 0))}
+          </div>
+        </>
+      ) : null}
 
       <button className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
         <Share2 className="w-6 h-6" />

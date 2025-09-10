@@ -1,13 +1,15 @@
 "use client";
 import { Search, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useDispatch } from "react-redux";
 import { setAmbientColor } from "@/store/playerSlice";
 import { useEffect, useRef, useState } from "react";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function TopBar() {
   const navigate = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((s) => s.user);
+  const isLoggedIn = !!(user?.id || user?.username);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -62,56 +64,73 @@ export default function TopBar() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="hidden cursor-pointer sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
-            onClick={() => handleNavigation("/upload")}
-          >
-            <Upload className="w-4 h-4" /> Upload
-          </button>
-
-          <div className="relative" ref={menuRef}>
-            <button
-              className="inline-block cursor-pointer"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((o) => !o)}
-            >
-              <img
-                src="https://i.pravatar.cc/80?img=5"
-                className="w-8 h-8 rounded-full"
-                alt="Profile menu"
-              />
-            </button>
-
-            {menuOpen ? (
-              <div
-                role="menu"
-                aria-orientation="vertical"
-                className="absolute right-0 mt-2 w-44 rounded-xl border border-white/10 bg-neutral-900/90 backdrop-blur-md shadow-xl py-1 z-50"
+          {isLoggedIn ? (
+            <>
+              <button
+                className="hidden cursor-pointer sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
+                onClick={() => handleNavigation("/upload")}
               >
-                <button
-                  role="menuitem"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 focus:bg-white/10 cursor-pointer"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    handleNavigation("/profile");
-                  }}
+                <Upload className="w-4 h-4" /> Upload
+              </button>
+            <div className="relative" ref={menuRef}>
+              <button
+                className="inline-block cursor-pointer"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((o) => !o)}
+              >
+                <img
+                  src={user?.picture_url || "https://i.pravatar.cc/80?img=5"}
+                  className="w-8 h-8 rounded-full"
+                  alt="Profile menu"
+                />
+              </button>
+
+              {menuOpen ? (
+                <div
+                  role="menu"
+                  aria-orientation="vertical"
+                  className="absolute right-0 mt-2 w-44 rounded-xl border border-white/10 bg-neutral-900/90 backdrop-blur-md shadow-xl py-1 z-50"
                 >
-                  Profile
-                </button>
-                <button
-                  role="menuitem"
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 focus:bg-white/10 cursor-pointer"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    handleNavigation("/settings");
-                  }}
-                >
-                  Settings
-                </button>
-              </div>
-            ) : null}
-          </div>
+                  <button
+                    role="menuitem"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 focus:bg-white/10 cursor-pointer"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleNavigation("/profile");
+                    }}
+                  >
+                    Profile
+                  </button>
+                  <button
+                    role="menuitem"
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-white/10 focus:bg-white/10 cursor-pointer"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      handleNavigation("/settings");
+                    }}
+                  >
+                    Settings
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            </>
+          ) : (
+            <button
+              className="cursor-pointer sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
+              onClick={() => {
+                // Redirect to external authentication if not logged in
+                if (process.env.NEXT_PUBLIC_BASE_API) {
+                  window.location.href = `${process.env.NEXT_PUBLIC_BASE_API}/line/authentication`;
+                } else {
+                  handleNavigation("/profile");
+                }
+              }}
+            >
+              Log in
+            </button>
+          )}
         </div>
       </div>
     </header>

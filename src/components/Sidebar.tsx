@@ -8,7 +8,7 @@ import {
   User,
   MessageCircle,
 } from "lucide-react";
-import { useDispatch } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setAmbientColor } from "@/store/playerSlice";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -18,10 +18,12 @@ function classNames(...arr: Array<string | false | null | undefined>) {
 
 export default function Sidebar() {
   const navigate = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const pathname = usePathname();
+  const user = useAppSelector((s) => s.user);
+  const isLoggedIn = !!(user?.id || user?.username);
 
-  const items = [
+  const itemsBase = [
     { icon: Home, label: "For You", link: "/" },
     { icon: Users, label: "Following", link: "/following" },
     { icon: Radio, label: "Live", link: "/live" },
@@ -29,6 +31,11 @@ export default function Sidebar() {
     { icon: MessageCircle, label: "Messages", link: "/messages" },
     { icon: User, label: "Profile", link: "/profile" },
   ];
+  const items = isLoggedIn
+    ? itemsBase
+    : itemsBase.filter(
+        (i) => !["Following", "Messages", "Profile"].includes(i.label)
+      );
   const orgs = [
     { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
     { name: "Vercel", logo: "https://logo.clearbit.com/vercel.com" },
@@ -72,24 +79,26 @@ export default function Sidebar() {
             </button>
           );})}
         </nav>
-        <div className="mt-6">
-          <p className="text-xs text-white/60 px-3 mb-2">Your Organizations</p>
-          {orgs.map((org) => (
-            <div
-              key={org.name}
-              className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
-            >
-              <img
-                src={org.logo}
-                alt={`${org.name} logo`}
-                className="w-8 h-8 rounded"
-              />
-              <div className="ml-3 leading-tight">
-                <p className="text-sm font-semibold">{org.name}</p>
+        {isLoggedIn ? (
+          <div className="mt-6">
+            <p className="text-xs text-white/60 px-3 mb-2">Your Organizations</p>
+            {orgs.map((org) => (
+              <div
+                key={org.name}
+                className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
+              >
+                <img
+                  src={org.logo}
+                  alt={`${org.name} logo`}
+                  className="w-8 h-8 rounded"
+                />
+                <div className="ml-3 leading-tight">
+                  <p className="text-sm font-semibold">{org.name}</p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </aside>
   );
