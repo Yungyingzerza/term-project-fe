@@ -1,7 +1,5 @@
-import ModernTok from "@/components/ModernTok";
+import ChillChill from "@/components/ChillChill";
 
 export default function Home() {
-  return (
-    <ModernTok />
-  );
+  return <ChillChill />;
 }

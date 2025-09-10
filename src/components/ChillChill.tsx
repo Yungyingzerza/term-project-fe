@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import { useSelector } from "react-redux";
 
-export default function ModernTok() {
+export default function ChillChill() {
   const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
   return (
     <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">

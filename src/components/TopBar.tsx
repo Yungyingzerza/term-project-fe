@@ -45,9 +45,9 @@ export default function TopBar() {
           className="cursor-pointer flex items-center gap-2 font-extrabold text-lg"
         >
           <div className="w-7 h-7 rounded-lg bg-white text-black grid place-items-center">
-            TT
+            CC
           </div>
-          <span className="hidden sm:inline">ModernTok</span>
+          <span className="hidden sm:inline">ChillChill</span>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
           <div className="group relative">
