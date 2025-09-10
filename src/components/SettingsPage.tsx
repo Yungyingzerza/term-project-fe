@@ -3,7 +3,16 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
 import { useDispatch, useSelector } from "react-redux";
-import { Check, LogOut, Save, Settings, Shield, Trash2, UserCog, X } from "lucide-react";
+import {
+  Check,
+  LogOut,
+  Save,
+  Settings,
+  Shield,
+  Trash2,
+  UserCog,
+  X,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction, KeyboardEvent } from "react";
 import { setPictureUrl, setUsername, setEmails } from "@/store/userSlice";
@@ -85,14 +94,18 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-              {/* Left column: Account + Password */}
+              {/* Left column: Account */}
               <div className="space-y-5 xl:col-span-2">
                 {/* Account */}
                 <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-neutral-800 shrink-0">
                       <img
-                        src={avatarDataUrl || user?.picture_url || "https://i.pravatar.cc/100?img=1"}
+                        src={
+                          avatarDataUrl ||
+                          user?.picture_url ||
+                          "https://i.pravatar.cc/100?img=1"
+                        }
                         alt="Avatar preview"
                         className="w-full h-full object-cover"
                       />
@@ -104,7 +117,9 @@ export default function SettingsPage() {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-sm text-white/80 mb-1">Display name</label>
+                          <label className="block text-sm text-white/80 mb-1">
+                            Display name
+                          </label>
                           <input
                             value={username}
                             onChange={(e) => setUsernameLocal(e.target.value)}
@@ -114,19 +129,36 @@ export default function SettingsPage() {
                         </div>
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
-                            <label className="block text-sm text-white/80 mb-1">Avatar</label>
+                            <label className="block text-sm text-white/80 mb-1">
+                              Avatar
+                            </label>
                             <div className="flex items-center gap-2">
-                              <button onClick={onPickAvatar} className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90">
+                              <button
+                                onClick={onPickAvatar}
+                                className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
+                              >
                                 Choose image
                               </button>
-                              <button onClick={() => setAvatarDataUrl("")} className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15">
+                              <button
+                                onClick={() => setAvatarDataUrl("")}
+                                className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15"
+                              >
                                 Remove
                               </button>
                             </div>
-                            <input ref={avatarInputRef} type="file" accept="image/*" onChange={onAvatarChange} className="hidden" />
+                            <input
+                              ref={avatarInputRef}
+                              type="file"
+                              accept="image/*"
+                              onChange={onAvatarChange}
+                              className="hidden"
+                            />
                           </div>
                         </div>
-                        <EmailsEditor emails={emails} setEmails={setEmailsLocal} />
+                        <EmailsEditor
+                          emails={emails}
+                          setEmails={setEmailsLocal}
+                        />
                       </div>
                       <div className="mt-3 flex items-center gap-2 justify-end">
                         <button
@@ -155,9 +187,6 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 </div>
-
-                {/* Password */}
-                <PasswordCard />
               </div>
 
               {/* Right column: Privacy + Danger */}
@@ -180,7 +209,11 @@ export default function SettingsPage() {
                         }`}
                         aria-pressed={showActivity}
                       >
-                        {showActivity ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                        {showActivity ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          <X className="w-4 h-4" />
+                        )}
                         {showActivity ? "On" : "Off"}
                       </button>
                     </div>
@@ -217,95 +250,6 @@ export default function SettingsPage() {
 
       <div className="relative z-10">
         <BottomTabs />
-      </div>
-    </div>
-  );
-}
-
-function PasswordCard() {
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [ok, setOk] = useState(false);
-
-  const valid = next.length >= 8 && next === confirm;
-
-  const onChangePassword = async () => {
-    setError("");
-    setOk(false);
-    if (!valid) {
-      setError("Password must be at least 8 characters and match.");
-      return;
-    }
-    setSaving(true);
-    try {
-      // Placeholder demo action
-      await new Promise((r) => setTimeout(r, 900));
-      setOk(true);
-      setCurrent("");
-      setNext("");
-      setConfirm("");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Settings className="w-4 h-4 text-white/80" />
-        <h2 className="font-semibold">Change Password</h2>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-sm text-white/80 mb-1">Current password</label>
-          <input
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            type="password"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
-            placeholder="••••••••"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-white/80 mb-1">New password</label>
-          <input
-            value={next}
-            onChange={(e) => setNext(e.target.value)}
-            type="password"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
-            placeholder="At least 8 characters"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-white/80 mb-1">Confirm new password</label>
-          <input
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            type="password"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
-            placeholder="Re-enter password"
-          />
-        </div>
-      </div>
-      <div className="mt-3 flex items-center justify-between">
-        <div className="text-xs">
-          {error && <span className="text-red-300">{error}</span>}
-          {ok && (
-            <span className="text-green-300 inline-flex items-center gap-1">
-              <Check className="w-3.5 h-3.5" /> Password updated
-            </span>
-          )}
-        </div>
-        <button
-          onClick={onChangePassword}
-          disabled={saving}
-          className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold disabled:opacity-50"
-        >
-          {saving ? "Saving..." : "Change Password"}
-        </button>
       </div>
     </div>
   );
@@ -376,7 +320,10 @@ function EmailsEditor({
       {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
       <div className="mt-2 flex flex-wrap gap-2">
         {emails.map((e) => (
-          <span key={e} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-sm">
+          <span
+            key={e}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-sm"
+          >
             {e}
             <button
               onClick={() => removeEmail(e)}

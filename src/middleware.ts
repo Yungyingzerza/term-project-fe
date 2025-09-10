@@ -6,7 +6,15 @@ export async function middleware(req: NextRequest) {
   let isAuth = false;
   const accessToken = req.cookies.get("accessToken")?.value;
   const refreshToken = req.cookies.get("refreshToken")?.value;
+  const lineState = req.cookies.get("lineState")?.value;
   const pathname = req.nextUrl.pathname;
+
+  //if lineState exists, remove it
+  if (lineState) {
+    const response = NextResponse.next();
+    response.cookies.delete("lineState");
+    return response;
+  }
 
   // Skip auth check if no token
   if (!accessToken && !refreshToken) {
@@ -100,7 +108,7 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  const protectedRoutes = ["/profile"];
+  const protectedRoutes = ["/profile", "/settings", "/messages"];
 
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -116,5 +124,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/profile/:path*"],
+  matcher: ["/", "/profile/:path*", "/settings/:path*", "/messages/:path*"],
 };

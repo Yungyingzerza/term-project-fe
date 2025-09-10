@@ -454,7 +454,7 @@ export default function VideoCard({
         className={`absolute inset-0 z-0 w-full h-full object-cover scale-110 pointer-events-none ${
           usePosterBg || !videoReady ? "hidden" : "blur-2xl"
         }`}
-        crossOrigin="anonymous"
+        crossOrigin="use-credentials"
         playsInline
         muted
         loop
@@ -472,7 +472,7 @@ export default function VideoCard({
       <video
         ref={videoRef}
         className="relative z-10 object-contain w-full h-full"
-        crossOrigin="anonymous"
+        crossOrigin="use-credentials"
         src={shouldLoad ? post.videoSrc : undefined}
         preload={isActive ? "auto" : shouldPreload ? "metadata" : "none"}
         poster={post.thumbnail}
