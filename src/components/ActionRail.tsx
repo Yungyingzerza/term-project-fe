@@ -503,7 +503,7 @@ export default function ActionRail({
         ))}
       </div>
       <div className="text-xs text-white/80" aria-live="polite">
-        {total > 0 ? formatCount(total) : ""}
+        {isLoggedIn || total > 0 ? formatCount(total) : ""}
       </div>
 
       {/* Comments are visible to guests too */}
