@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ActionRailProps, Interactions, ReactionKey } from "@/interfaces";
 import ReactionIcon from "./ReactionIcon";
 import { useAppSelector } from "@/store/hooks";
+import { useReaction } from "@/hooks/useReaction";
 
 // UX timing constants (ms)
 const LONG_PRESS_DELAY_MS = 500; // time to press-and-hold before opening picker
@@ -62,6 +63,7 @@ export default function ActionRail({
   // Detect if this device actually supports hover (mouse/trackpad). Many hybrid devices have touch
   // AND mouse; prefer enabling hover when available.
   const canHoverRef = useRef<boolean>(true);
+  const { reactToPost, removeReaction: apiRemoveReaction } = useReaction();
 
   useEffect(() => {
     try {
@@ -122,45 +124,12 @@ export default function ActionRail({
     }));
   };
 
-  // API helpers
-  const baseApi = (process.env.NEXT_PUBLIC_BASE_API || "").trim();
   const busyRef = useRef<boolean>(false);
 
   type ReactionResponse = {
     postId: string;
     interactions: Interactions;
     viewer?: { reaction?: ReactionKey | null };
-  };
-
-  const sendReaction = async (key: ReactionKey): Promise<ReactionResponse> => {
-    if (!baseApi) throw new Error("BASE API not configured");
-    const url = new URL(`/feed/${postId}/reaction`, baseApi);
-    const res = await fetch(url.toString(), {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ key }),
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Failed to react: ${res.status} ${res.statusText}${txt ? ` - ${txt}` : ""}`);
-    }
-    return (await res.json()) as ReactionResponse;
-  };
-
-  const removeReaction = async (): Promise<ReactionResponse> => {
-    if (!baseApi) throw new Error("BASE API not configured");
-    const url = new URL(`/feed/${postId}/reaction`, baseApi);
-    const res = await fetch(url.toString(), {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Failed to remove reaction: ${res.status} ${res.statusText}${txt ? ` - ${txt}` : ""}`);
-    }
-    return (await res.json()) as ReactionResponse;
   };
 
   const handleMainClick = () => {
@@ -180,7 +149,7 @@ export default function ActionRail({
       // Fire API, revert if fails
       if (!busyRef.current) {
         busyRef.current = true;
-        removeReaction()
+        apiRemoveReaction(postId)
           .then((data) => {
             setCounts(data.interactions);
             setReaction(data?.viewer?.reaction ?? null);
@@ -206,7 +175,7 @@ export default function ActionRail({
       cancelLongPress();
       if (!busyRef.current) {
         busyRef.current = true;
-        sendReaction(chosen)
+        reactToPost(postId, chosen)
           .then((data) => {
             setCounts(data.interactions);
             setReaction(data?.viewer?.reaction ?? chosen);
@@ -236,7 +205,7 @@ export default function ActionRail({
       cancelLongPress();
       if (!busyRef.current) {
         busyRef.current = true;
-        removeReaction()
+        apiRemoveReaction(postId)
           .then((data) => {
             setCounts(data.interactions);
             setReaction(data?.viewer?.reaction ?? null);
@@ -262,7 +231,7 @@ export default function ActionRail({
       cancelLongPress();
       if (!busyRef.current) {
         busyRef.current = true;
-        sendReaction(k)
+        reactToPost(postId, k)
           .then((data) => {
             setCounts(data.interactions);
             setReaction(data?.viewer?.reaction ?? k);
