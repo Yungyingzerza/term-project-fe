@@ -45,6 +45,7 @@ export default async function RootLayout({
           id={user?.id}
           username={user?.username}
           pictureUrl={user?.picture_url}
+          exp={user?.exp || 0}
         >
           {children}
         </ClientProvider>
