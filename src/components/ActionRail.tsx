@@ -35,13 +35,15 @@ const REACTIONS: Array<{
 ];
 
 export default function ActionRail({
+  postId,
   interactions,
   comments,
   saves,
+  viewerReaction = null,
 }: ActionRailProps) {
   const user = useAppSelector((s) => s.user);
   const isLoggedIn = !!(user?.id || user?.username);
-  const [reaction, setReaction] = useState<ReactionKey | null>(null);
+  const [reaction, setReaction] = useState<ReactionKey | null>(viewerReaction);
   const [counts, setCounts] = useState<Interactions>(interactions);
   const [saved, setSaved] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -89,6 +91,7 @@ export default function ActionRail({
   const displayedKey: ReactionKey = reaction || topKey;
   const displayed = REACTIONS.find((r) => r.key === displayedKey)!;
   useEffect(() => setCounts(interactions), [interactions]);
+  useEffect(() => setReaction(viewerReaction ?? null), [viewerReaction]);
 
   // Derive top reactions (max 3) for a compact summary below the button
   const topReactions = (Object.keys(counts) as ReactionKey[])
@@ -119,6 +122,47 @@ export default function ActionRail({
     }));
   };
 
+  // API helpers
+  const baseApi = (process.env.NEXT_PUBLIC_BASE_API || "").trim();
+  const busyRef = useRef<boolean>(false);
+
+  type ReactionResponse = {
+    postId: string;
+    interactions: Interactions;
+    viewer?: { reaction?: ReactionKey | null };
+  };
+
+  const sendReaction = async (key: ReactionKey): Promise<ReactionResponse> => {
+    if (!baseApi) throw new Error("BASE API not configured");
+    const url = new URL(`/feed/${postId}/reaction`, baseApi);
+    const res = await fetch(url.toString(), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ key }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Failed to react: ${res.status} ${res.statusText}${txt ? ` - ${txt}` : ""}`);
+    }
+    return (await res.json()) as ReactionResponse;
+  };
+
+  const removeReaction = async (): Promise<ReactionResponse> => {
+    if (!baseApi) throw new Error("BASE API not configured");
+    const url = new URL(`/feed/${postId}/reaction`, baseApi);
+    const res = await fetch(url.toString(), {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Failed to remove reaction: ${res.status} ${res.statusText}${txt ? ` - ${txt}` : ""}`);
+    }
+    return (await res.json()) as ReactionResponse;
+  };
+
   const handleMainClick = () => {
     if (suppressClickRef.current) {
       // Avoid toggling after a long-press selection
@@ -127,17 +171,56 @@ export default function ActionRail({
     }
     // Toggle immediately, even if the picker is open
     if (reaction) {
+      const prevCounts = counts;
+      const prevReaction = reaction;
       inc(reaction, -1);
       setReaction(null);
       lastSelectAtRef.current = Date.now();
       cancelLongPress();
+      // Fire API, revert if fails
+      if (!busyRef.current) {
+        busyRef.current = true;
+        removeReaction()
+          .then((data) => {
+            setCounts(data.interactions);
+            setReaction(data?.viewer?.reaction ?? null);
+          })
+          .catch((err) => {
+            console.error(err);
+            // revert
+            setCounts(prevCounts);
+            setReaction(prevReaction);
+          })
+          .finally(() => {
+            busyRef.current = false;
+          });
+      }
     } else {
-      inc(displayedKey, 1);
-      setReaction(displayedKey);
+      const chosen = displayedKey;
+      const prevCounts = counts;
+      inc(chosen, 1);
+      setReaction(chosen);
       const col = REACTIONS.find((r) => r.key === displayedKey)!.accent;
       setBurst({ color: col, at: Date.now() });
       lastSelectAtRef.current = Date.now();
       cancelLongPress();
+      if (!busyRef.current) {
+        busyRef.current = true;
+        sendReaction(chosen)
+          .then((data) => {
+            setCounts(data.interactions);
+            setReaction(data?.viewer?.reaction ?? chosen);
+          })
+          .catch((err) => {
+            console.error(err);
+            // revert
+            setCounts(prevCounts);
+            setReaction(null);
+          })
+          .finally(() => {
+            busyRef.current = false;
+          });
+      }
     }
     if (pickerOpen) setPickerOpen(false);
   };
@@ -145,11 +228,31 @@ export default function ActionRail({
   const choose = (k: ReactionKey) => {
     if (reaction === k) {
       // toggle off when clicking the same reaction
+      const prevCounts = counts;
+      const prevReaction = reaction;
       inc(k, -1);
       setReaction(null);
       lastSelectAtRef.current = Date.now();
       cancelLongPress();
+      if (!busyRef.current) {
+        busyRef.current = true;
+        removeReaction()
+          .then((data) => {
+            setCounts(data.interactions);
+            setReaction(data?.viewer?.reaction ?? null);
+          })
+          .catch((err) => {
+            console.error(err);
+            setCounts(prevCounts);
+            setReaction(prevReaction);
+          })
+          .finally(() => {
+            busyRef.current = false;
+          });
+      }
     } else {
+      const prevCounts = counts;
+      const prevReaction = reaction;
       if (reaction && reaction !== k) inc(reaction, -1);
       inc(k, 1);
       setReaction(k);
@@ -157,6 +260,22 @@ export default function ActionRail({
       setBurst({ color: col, at: Date.now() });
       lastSelectAtRef.current = Date.now();
       cancelLongPress();
+      if (!busyRef.current) {
+        busyRef.current = true;
+        sendReaction(k)
+          .then((data) => {
+            setCounts(data.interactions);
+            setReaction(data?.viewer?.reaction ?? k);
+          })
+          .catch((err) => {
+            console.error(err);
+            setCounts(prevCounts);
+            setReaction(prevReaction ?? null);
+          })
+          .finally(() => {
+            busyRef.current = false;
+          });
+      }
     }
     setPickerOpen(false);
   };

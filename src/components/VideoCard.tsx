@@ -536,9 +536,11 @@ export default function VideoCard({
       </div>
 
       <ActionRail
+        postId={post.id}
         interactions={post.interactions}
         comments={post.comments}
         saves={post.saves}
+        viewerReaction={post.viewer?.reaction ?? null}
       />
       <MusicTicker text={post.music} />
 
