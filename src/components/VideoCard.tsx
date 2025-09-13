@@ -541,6 +541,7 @@ export default function VideoCard({
         comments={post.comments}
         saves={post.saves}
         viewerReaction={post.viewer?.reaction ?? null}
+        viewerSaved={post.viewer?.saved ?? null}
       />
       <MusicTicker text={post.music} />
 

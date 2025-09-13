@@ -18,5 +18,6 @@ export interface PostItem {
    */
   viewer?: {
     reaction?: ReactionKey | null;
+    saved?: boolean | null;
   };
 }

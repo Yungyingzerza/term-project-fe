@@ -5,6 +5,7 @@ import type { ActionRailProps, Interactions, ReactionKey } from "@/interfaces";
 import ReactionIcon from "./ReactionIcon";
 import { useAppSelector } from "@/store/hooks";
 import { useReaction } from "@/hooks/useReaction";
+import { useSave } from "@/hooks/useSave";
 
 // UX timing constants (ms)
 const LONG_PRESS_DELAY_MS = 500; // time to press-and-hold before opening picker
@@ -41,12 +42,14 @@ export default function ActionRail({
   comments,
   saves,
   viewerReaction = null,
+  viewerSaved = null,
 }: ActionRailProps) {
   const user = useAppSelector((s) => s.user);
   const isLoggedIn = !!(user?.id || user?.username);
   const [reaction, setReaction] = useState<ReactionKey | null>(viewerReaction);
   const [counts, setCounts] = useState<Interactions>(interactions);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState<boolean>(!!viewerSaved);
+  const [savesCount, setSavesCount] = useState<number>(saves);
   const [pickerOpen, setPickerOpen] = useState(false);
   const longPressTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
@@ -64,6 +67,7 @@ export default function ActionRail({
   // AND mouse; prefer enabling hover when available.
   const canHoverRef = useRef<boolean>(true);
   const { reactToPost, removeReaction: apiRemoveReaction } = useReaction();
+  const { savePost, removeSave } = useSave();
 
   useEffect(() => {
     try {
@@ -94,6 +98,8 @@ export default function ActionRail({
   const displayed = REACTIONS.find((r) => r.key === displayedKey)!;
   useEffect(() => setCounts(interactions), [interactions]);
   useEffect(() => setReaction(viewerReaction ?? null), [viewerReaction]);
+  useEffect(() => setSaved(!!viewerSaved), [viewerSaved]);
+  useEffect(() => setSavesCount(saves), [saves]);
 
   // Derive top reactions (max 3) for a compact summary below the button
   const topReactions = (Object.keys(counts) as ReactionKey[])
@@ -508,7 +514,29 @@ export default function ActionRail({
       {isLoggedIn ? (
         <>
           <button
-            onClick={() => setSaved((v) => !v)}
+            onClick={async () => {
+              const prevSaved = saved;
+              const prevCount = savesCount;
+              // optimistic
+              setSaved(!prevSaved);
+              setSavesCount(Math.max(0, prevCount + (prevSaved ? -1 : 1)));
+              try {
+                if (!prevSaved) {
+                  const res = await savePost(postId);
+                  setSaved(!!res?.viewer?.saved);
+                  setSavesCount(res?.saves ?? prevCount + 1);
+                } else {
+                  const res = await removeSave(postId);
+                  setSaved(!!res?.viewer?.saved);
+                  setSavesCount(res?.saves ?? Math.max(0, prevCount - 1));
+                }
+              } catch (e) {
+                console.error(e);
+                // revert on error
+                setSaved(prevSaved);
+                setSavesCount(prevCount);
+              }
+            }}
             className={classNames(
               "grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60",
               saved && "ring-2 ring-white/60"
@@ -517,9 +545,7 @@ export default function ActionRail({
           >
             <Bookmark className={classNames("w-6 h-6", saved && "fill-current")} />
           </button>
-          <div className="text-xs text-white/80">
-            {formatCount(saves + (saved ? 1 : 0))}
-          </div>
+          <div className="text-xs text-white/80">{formatCount(savesCount)}</div>
         </>
       ) : null}
 
