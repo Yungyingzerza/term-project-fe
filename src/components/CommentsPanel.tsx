@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CommentItem, CommentVisibility } from "@/interfaces";
 import { useComments } from "@/hooks/useComments";
+import { useAppSelector } from "@/store/hooks";
 
 export interface CommentsPanelProps {
   postId: string;
@@ -42,6 +43,8 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const postingRef = useRef<boolean>(false);
   const [mounted, setMounted] = useState(false);
+  const user = useAppSelector((s) => s.user);
+  const isLoggedIn = !!(user?.id || user?.username);
 
   // Focus input when opening
   useEffect(() => {
@@ -157,36 +160,48 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
         </div>
         {/* Composer */}
         <div className="px-3 pb-3 pt-2 border-t border-white/10">
-          <div className="flex items-center gap-2">
-            <select
-              value={visibility}
-              onChange={(e) => setVisibility(e.target.value as CommentVisibility)}
-              className="text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:bg-black/60 text-white"
-            >
-              <option value="Public">Public</option>
-              <option value="OwnerOnly">Owner only</option>
-            </select>
-            <input
-              ref={inputRef}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  onSubmit();
-                }
-              }}
-              placeholder="Add a comment..."
-              className="flex-1 text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
-            />
-            <button
-              onClick={onSubmit}
-              disabled={!text.trim()}
-              className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60"
-            >
-              Send
-            </button>
-          </div>
+          {isLoggedIn ? (
+            <div className="flex items-center gap-2">
+              <select
+                value={visibility}
+                onChange={(e) => setVisibility(e.target.value as CommentVisibility)}
+                className="text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:bg-black/60 text-white"
+              >
+                <option value="Public">Public</option>
+                <option value="OwnerOnly">Owner only</option>
+              </select>
+              <input
+                ref={inputRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    onSubmit();
+                  }
+                }}
+                placeholder="Add a comment..."
+                className="flex-1 text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
+              />
+              <button
+                onClick={onSubmit}
+                disabled={!text.trim()}
+                className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60"
+              >
+                Send
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs text-white/70">Sign in to comment</div>
+              <a
+                href={`${process.env.NEXT_PUBLIC_BASE_API}/line/authentication`}
+                className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90"
+              >
+                Sign in
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>,

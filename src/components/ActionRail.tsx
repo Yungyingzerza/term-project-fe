@@ -503,22 +503,19 @@ export default function ActionRail({
         ))}
       </div>
       <div className="text-xs text-white/80" aria-live="polite">
-        {formatCount(total)}
+        {total > 0 ? formatCount(total) : ""}
       </div>
 
-      {isLoggedIn ? (
-        <>
-          <button
-            onClick={() => setCommentsOpen(true)}
-            className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
-            aria-label="Open comments"
-            data-prevent-feed-swipe
-          >
-            <MessageCircle className="w-6 h-6" />
-          </button>
-          <div className="text-xs text-white/80">{formatCount(commentCount)}</div>
-        </>
-      ) : null}
+      {/* Comments are visible to guests too */}
+      <button
+        onClick={() => setCommentsOpen(true)}
+        className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+        aria-label="Open comments"
+        data-prevent-feed-swipe
+      >
+        <MessageCircle className="w-6 h-6" />
+      </button>
+      <div className="text-xs text-white/80">{formatCount(commentCount)}</div>
 
       {isLoggedIn ? (
         <>
