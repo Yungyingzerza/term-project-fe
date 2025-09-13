@@ -6,6 +6,7 @@ import ReactionIcon from "./ReactionIcon";
 import { useAppSelector } from "@/store/hooks";
 import { useReaction } from "@/hooks/useReaction";
 import { useSave } from "@/hooks/useSave";
+import CommentsPanel from "./CommentsPanel";
 
 // UX timing constants (ms)
 const LONG_PRESS_DELAY_MS = 500; // time to press-and-hold before opening picker
@@ -50,6 +51,8 @@ export default function ActionRail({
   const [counts, setCounts] = useState<Interactions>(interactions);
   const [saved, setSaved] = useState<boolean>(!!viewerSaved);
   const [savesCount, setSavesCount] = useState<number>(saves);
+  const [commentCount, setCommentCount] = useState<number>(comments);
+  const [commentsOpen, setCommentsOpen] = useState<boolean>(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const longPressTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
@@ -100,6 +103,7 @@ export default function ActionRail({
   useEffect(() => setReaction(viewerReaction ?? null), [viewerReaction]);
   useEffect(() => setSaved(!!viewerSaved), [viewerSaved]);
   useEffect(() => setSavesCount(saves), [saves]);
+  useEffect(() => setCommentCount(comments), [comments]);
 
   // Derive top reactions (max 3) for a compact summary below the button
   const topReactions = (Object.keys(counts) as ReactionKey[])
@@ -504,10 +508,15 @@ export default function ActionRail({
 
       {isLoggedIn ? (
         <>
-          <button className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
+          <button
+            onClick={() => setCommentsOpen(true)}
+            className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+            aria-label="Open comments"
+            data-prevent-feed-swipe
+          >
             <MessageCircle className="w-6 h-6" />
           </button>
-          <div className="text-xs text-white/80">{formatCount(comments)}</div>
+          <div className="text-xs text-white/80">{formatCount(commentCount)}</div>
         </>
       ) : null}
 
@@ -552,6 +561,14 @@ export default function ActionRail({
       <button className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
         <Share2 className="w-6 h-6" />
       </button>
+
+      {/* Comments overlay */}
+      <CommentsPanel
+        postId={postId}
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+        onAdded={() => setCommentCount((c) => c + 1)}
+      />
     </div>
   );
 }
