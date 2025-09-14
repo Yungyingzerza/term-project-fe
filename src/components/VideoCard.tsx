@@ -31,6 +31,22 @@ export default function VideoCard({
   const isActiveRef = useRef<boolean>(isActive);
   const progressInnerRef = useRef<HTMLDivElement | null>(null);
   const lastProgressRef = useRef<number>(0);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
+
+  // Scrubbing + thumbnail preview state
+  const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
+  const [hoverRatio, setHoverRatio] = useState<number | null>(null);
+  const [previewTime, setPreviewTime] = useState<number | null>(null);
+  const [previewVisible, setPreviewVisible] = useState<boolean>(false);
+  const [previewSize, setPreviewSize] = useState<{ w: number; h: number }>({
+    w: 140,
+    h: 248,
+  });
+  const playingBeforeScrubRef = useRef<boolean>(true);
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const lastPreviewRequestRef = useRef<number>(0);
+  const pendingSeekRef = useRef<number | null>(null);
 
   // Track latest isActive in a ref to avoid stale closures in event handlers
   useEffect(() => {
@@ -229,6 +245,178 @@ export default function VideoCard({
       bg?.removeEventListener("loadedmetadata", onBgLoaded);
     };
   }, [usePosterBg]);
+
+  // Maintain preview canvas size according to video aspect ratio
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const update = () => {
+      const vw = v.videoWidth || 9;
+      const vh = v.videoHeight || 16;
+      const targetW = 140; // px
+      const targetH = Math.max(80, Math.round((targetW * vh) / vw));
+      setPreviewSize({ w: targetW, h: targetH });
+      const c = previewCanvasRef.current;
+      if (c) {
+        c.width = targetW;
+        c.height = targetH;
+      }
+    };
+    update();
+    v.addEventListener("loadedmetadata", update);
+    v.addEventListener("resize", update as any);
+    return () => {
+      v.removeEventListener("loadedmetadata", update);
+      v.removeEventListener("resize", update as any);
+    };
+  }, [post.videoSrc]);
+
+  // Lazy-init preview video element to avoid extra network until needed
+  const ensurePreviewVideo = () => {
+    if (previewVideoRef.current) return previewVideoRef.current;
+    const v = document.createElement("video");
+    v.crossOrigin = "use-credentials";
+    v.playsInline = true;
+    v.preload = "metadata";
+    v.muted = true;
+    v.src = post.videoSrc;
+    previewVideoRef.current = v;
+    return v;
+  };
+
+  const drawPreview = (time: number) => {
+    const now = Date.now();
+    // Throttle seeks to ~30fps while dragging
+    if (now - lastPreviewRequestRef.current < 30) {
+      pendingSeekRef.current = time;
+      return;
+    }
+    lastPreviewRequestRef.current = now;
+
+    const pv = ensurePreviewVideo();
+    const canvas = previewCanvasRef.current;
+    if (!pv || !canvas) return;
+
+    const doDraw = () => {
+      try {
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const { w, h } = previewSize;
+        ctx.clearRect(0, 0, w, h);
+        const vw = pv.videoWidth || 9;
+        const vh = pv.videoHeight || 16;
+        // Contain into preview box
+        const scale = Math.min(w / vw, h / vh);
+        const dw = vw * scale;
+        const dh = vh * scale;
+        const dx = (w - dw) / 2;
+        const dy = (h - dh) / 2;
+        ctx.drawImage(pv, dx, dy, dw, dh);
+      } catch {
+        // Drawing cross-origin videos may taint canvas; we don't read pixels, so ignore errors
+      }
+    };
+
+    const onSeeked = () => {
+      pv.removeEventListener("seeked", onSeeked);
+      doDraw();
+      // If another seek was queued while we waited, process it now
+      if (pendingSeekRef.current != null) {
+        const t = pendingSeekRef.current;
+        pendingSeekRef.current = null;
+        drawPreview(t!);
+      }
+    };
+
+    // If metadata not ready, wait for it first
+    if (pv.readyState < 1) {
+      const onMeta = () => {
+        pv.removeEventListener("loadedmetadata", onMeta);
+        pv.currentTime = Math.max(0, Math.min(time, (pv.duration || 0) - 0.001));
+      };
+      pv.addEventListener("loadedmetadata", onMeta);
+      pv.load();
+    }
+
+    pv.addEventListener("seeked", onSeeked);
+    try {
+      pv.currentTime = Math.max(0, Math.min(time, (pv.duration || 0) - 0.001));
+    } catch {
+      pv.removeEventListener("seeked", onSeeked);
+    }
+  };
+
+  const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+  const clientXToRatio = (clientX: number) => {
+    const bar = progressBarRef.current;
+    if (!bar) return 0;
+    const rect = bar.getBoundingClientRect();
+    return clamp01((clientX - rect.left) / Math.max(1, rect.width));
+  };
+
+  const beginScrub = (ratio: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    playingBeforeScrubRef.current = playing;
+    setIsScrubbing(true);
+    setPreviewVisible(true);
+    setPlaying(false);
+    const dur = isFinite(v.duration) ? v.duration : 0;
+    const t = dur * ratio;
+    setPreviewTime(t);
+    setHoverRatio(ratio);
+    drawPreview(t);
+  };
+
+  const updateScrub = (ratio: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const dur = isFinite(v.duration) ? v.duration : 0;
+    const t = dur * ratio;
+    setPreviewTime(t);
+    setHoverRatio(ratio);
+    drawPreview(t);
+  };
+
+  const endScrub = (ratio?: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    const r = ratio != null ? ratio : hoverRatio ?? lastProgressRef.current;
+    const dur = isFinite(v.duration) ? v.duration : 0;
+    const t = dur * clamp01(r ?? 0);
+    try {
+      if (isFinite(t) && t >= 0) v.currentTime = t;
+    } catch {}
+    setIsScrubbing(false);
+    setPreviewVisible(false);
+    setHoverRatio(null);
+    setPreviewTime(null);
+    if (playingBeforeScrubRef.current) setPlaying(true);
+  };
+
+  // Attach pointer listeners during active scrubbing for outside moves
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!isScrubbing) return;
+      const ratio = clientXToRatio(e.clientX);
+      updateScrub(ratio);
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!isScrubbing) return;
+      const ratio = clientXToRatio(e.clientX);
+      endScrub(ratio);
+    };
+    if (isScrubbing) {
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    }
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [isScrubbing]);
 
   // Track when the primary video is actually ready to render frames.
   useEffect(() => {
@@ -545,13 +733,80 @@ export default function VideoCard({
       />
       <MusicTicker text={post.music} />
 
-      <div className="absolute left-0 right-0 bottom-0 h-1.5 bg-white/10 z-30 overflow-hidden">
-        <div
-          ref={progressInnerRef}
-          className="h-full bg-white/80 will-change-transform origin-left"
-          style={{ transform: "scaleX(0)" }}
-        />
+      {/* Scrubbable progress bar + thumbnail preview */}
+      <div
+        ref={progressBarRef}
+        className="absolute left-0 right-0 bottom-0 h-6 z-30 overflow-visible cursor-pointer touch-none"
+        onPointerDown={(e) => {
+          // Only left button or touch
+          if ((e as any).button != null && (e as any).button !== 0) return;
+          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+          const ratio = clientXToRatio(e.clientX);
+          beginScrub(ratio);
+        }}
+        onPointerMove={(e) => {
+          const ratio = clientXToRatio(e.clientX);
+          setHoverRatio(ratio);
+          if (!isScrubbing) return;
+          const v = videoRef.current;
+          if (!v) return;
+          const dur = isFinite(v.duration) ? v.duration : 0;
+          const t = dur * ratio;
+          setPreviewTime(t);
+          drawPreview(t);
+        }}
+        onPointerLeave={() => {
+          if (!isScrubbing) setPreviewVisible(false);
+          setHoverRatio(null);
+        }}
+        onPointerUp={(e) => {
+          if (!isScrubbing) return;
+          (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+          const ratio = clientXToRatio(e.clientX);
+          endScrub(ratio);
+        }}
+      >
+        {/* Thin visible track anchored to bottom; larger wrapper keeps touch target comfortable */}
+        <div className="absolute left-0 right-0 bottom-0 h-0.5 sm:h-1 bg-white/10 rounded-full overflow-hidden">
+          <div
+            ref={progressInnerRef}
+            className="h-full bg-white/80 will-change-transform origin-left"
+            style={{ transform: "scaleX(0)" }}
+          />
+        </div>
+
+        {/* Hover/drag preview bubble */}
+        {isScrubbing && hoverRatio != null && (
+          <div
+            className="absolute bottom-full mb-2 px-1 py-1 rounded-md bg-black/80 border border-white/10 shadow-lg backdrop-blur-sm select-none"
+            style={{
+              left: `${(hoverRatio || 0) * 100}%`,
+              transform: "translateX(-50%)",
+            }}
+          >
+            <canvas
+              ref={previewCanvasRef}
+              width={previewSize.w}
+              height={previewSize.h}
+              style={{ width: previewSize.w, height: previewSize.h, display: "block" }}
+            />
+            {previewTime != null && (
+              <div className="text-[10px] leading-none text-white/80 text-center mt-1">
+                {(() => {
+                  const t = Math.max(0, Math.floor(previewTime || 0));
+                  const mm = Math.floor(t / 60)
+                    .toString()
+                    .padStart(2, "0");
+                  const ss = (t % 60).toString().padStart(2, "0");
+                  return `${mm}:${ss}`;
+                })()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Off-DOM hidden preview <video> is created lazily. No JSX element needed. */}
     </article>
   );
 }
