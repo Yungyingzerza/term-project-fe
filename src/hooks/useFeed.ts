@@ -1,52 +1,18 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PostItem } from "@/interfaces";
-
-export type FeedAlgo = "for-you" | "following";
-
-export interface FeedResponse {
-  algo: FeedAlgo;
-  items: PostItem[];
-  paging: {
-    nextCursor: string | null;
-    hasMore: boolean;
-  };
-}
-
-export interface GetFeedParams {
-  algo?: FeedAlgo;
-  limit?: number;
-  cursor?: string | null;
-  signal?: AbortSignal;
-}
+import {
+  getFeed as getFeedApi,
+  getFeedByUserHandle as getFeedByUserHandleApi,
+} from "@/lib/api/feed";
+export type { FeedAlgo, FeedResponse, GetFeedParams, UserFeedResponse, GetUserFeedParams } from "@/lib/api/feed";
 
 /**
  * Low-level fetcher for the feed endpoint.
  * GET /feed?algo=for-you|following&limit&cursor
  */
-export async function getFeed({ algo = "for-you", limit = 10, cursor, signal }: GetFeedParams = {}): Promise<FeedResponse> {
-  // Use the public base API from env
-  const base = process.env.NEXT_PUBLIC_BASE_API as string;
-
-  const url = new URL("/feed", base);
-  url.searchParams.set("algo", algo);
-  if (limit != null) url.searchParams.set("limit", String(limit));
-  if (cursor) url.searchParams.set("cursor", cursor);
-
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-    signal,
-    credentials: "include",
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Failed to fetch feed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`);
-  }
-
-  const data = (await res.json()) as FeedResponse;
-  return data;
+export async function getFeed(params?: GetFeedParams): Promise<import("@/lib/api/feed").FeedResponse> {
+  return getFeedApi(params);
 }
 
 export interface UseFeedOptions {
@@ -56,6 +22,13 @@ export interface UseFeedOptions {
   cursor?: string | null;
   /** Whether the hook should fetch automatically. */
   enabled?: boolean;
+}
+
+// User feed by handle
+export async function getFeedByUserHandle(
+  params: import("@/lib/api/feed").GetUserFeedParams
+): Promise<import("@/lib/api/feed").UserFeedResponse> {
+  return getFeedByUserHandleApi(params);
 }
 
 export interface UseFeedResult {
@@ -97,7 +70,7 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
       const ctrl = new AbortController();
       inFlight.current = ctrl;
       try {
-        const data = await getFeed({ algo, limit, cursor: mode === "reset" ? null : nextCursor, signal: ctrl.signal });
+        const data = await getFeedApi({ algo, limit, cursor: mode === "reset" ? null : nextCursor, signal: ctrl.signal });
         setHasMore(!!data?.paging?.hasMore);
         setNextCursor(data?.paging?.nextCursor ?? null);
         setItems((prev) => (mode === "reset" ? data.items ?? [] : [...prev, ...(data.items ?? [])]));

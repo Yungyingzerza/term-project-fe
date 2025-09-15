@@ -8,6 +8,7 @@ const initialState = {
   emails: [] as string[],
   isLoaded: false,
   exp: 0,
+  handle: "",
 };
 
 export const userSlice = createSlice({
@@ -29,9 +30,18 @@ export const userSlice = createSlice({
     setExp: (state, action) => {
       state.exp = action.payload;
     },
+    setHandle: (state, action) => {
+      state.handle = action.payload;
+    },
   },
 });
 
-export const { setId, setUsername, setPictureUrl, setEmails, setExp } =
-  userSlice.actions;
+export const {
+  setId,
+  setUsername,
+  setPictureUrl,
+  setEmails,
+  setExp,
+  setHandle,
+} = userSlice.actions;
 export default userSlice.reducer;

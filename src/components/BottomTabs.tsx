@@ -21,7 +21,11 @@ export default function BottomTabs() {
     { icon: Compass, label: "Explore", link: "/explore" },
     { icon: Plus, label: "Create", link: "/upload" },
     { icon: MessageCircle, label: "Messages", link: "/messages" },
-    { icon: User, label: "Profile", link: "/profile" },
+    {
+      icon: User,
+      label: "Profile",
+      link: user?.handle ? `/${user.handle}` : "/profile",
+    },
   ];
   const tabs = isLoggedIn
     ? tabsBase
@@ -84,36 +88,41 @@ export default function BottomTabs() {
         {tabs.map(({ icon: Icon, label, link, external }) => {
           const isActive =
             link === "/"
-              ? pathname === "/" || pathname.startsWith("/following") || pathname.startsWith("/live")
+              ? pathname === "/" ||
+                pathname.startsWith("/following") ||
+                pathname.startsWith("/live")
               : pathname === link || pathname.startsWith(link + "/");
           return (
-          <button
-            key={label}
-            onClick={() => {
-              if (external) {
-                try {
-                  window.location.href = link;
-                } catch {
-                  // fallback: navigate to profile (middleware will redirect)
-                  handleNavigation("/profile");
+            <button
+              key={label}
+              onClick={() => {
+                if (external) {
+                  try {
+                    window.location.href = link;
+                  } catch {
+                    // fallback: navigate to profile (middleware will redirect)
+                    handleNavigation("/");
+                  }
+                } else {
+                  handleNavigation(link);
                 }
-              } else {
-                handleNavigation(link);
-              }
-            }}
-            className="flex flex-col items-center gap-0.5 text-[11px]"
-          >
-            <Icon className={classNames("w-5 h-5", isActive && "text-white")} />
-            <span
-              className={classNames(
-                "",
-                isActive ? "text-white" : "text-white/60"
-              )}
+              }}
+              className="flex flex-col items-center gap-0.5 text-[11px]"
             >
-              {label}
-            </span>
-          </button>
-        );})}
+              <Icon
+                className={classNames("w-5 h-5", isActive && "text-white")}
+              />
+              <span
+                className={classNames(
+                  "",
+                  isActive ? "text-white" : "text-white/60"
+                )}
+              >
+                {label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </nav>
   );

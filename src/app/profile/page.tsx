@@ -1,6 +1,19 @@
-import dynamic from "next/dynamic";
-import ProfilePage from "@/components/ProfilePage";
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSelector } from "react-redux";
 
 export default function ProfileRoute() {
-  return <ProfilePage />;
+  const router = useRouter();
+  const user = useSelector((s: any) => s.user) as { username?: string };
+
+  useEffect(() => {
+    if (user?.username) {
+      router.replace(`/${user.username}`);
+    } else {
+      router.replace("/");
+    }
+  }, [user?.username, router]);
+
+  return null;
 }

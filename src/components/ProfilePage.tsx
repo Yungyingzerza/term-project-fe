@@ -3,6 +3,8 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
 import { useSelector } from "react-redux";
+import type { PostItem } from "@/interfaces/post";
+import type { UserMeta } from "@/interfaces/user";
 import {
   Eye,
   Play,
@@ -20,7 +22,7 @@ type MiniPost = {
   thumbnail: string;
   videoSrc: string;
   views: number;
-  duration: string; // mm:ss
+  duration?: string; // mm:ss
 };
 
 const SAMPLE_GRID: MiniPost[] = [
@@ -74,21 +76,48 @@ const SAMPLE_GRID: MiniPost[] = [
   },
 ];
 
-export default function ProfilePage() {
+interface ProfilePageProps {
+  author?: UserMeta;
+  items?: PostItem[];
+}
+
+export default function ProfilePage({ author, items }: ProfilePageProps) {
   const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
   const user = useSelector((s: any) => s.user) as {
     username: string;
     picture_url: string;
   };
-  const displayName = user?.username || "Lumina";
-  const handle = user?.username ? `@${user.username}` : "@lumina.ai";
-  const avatar = user?.picture_url || "https://i.pravatar.cc/100?img=1";
+  const displayName = author?.name || user?.username || "Lumina";
+  const handle = author?.handle
+    ? `@${author.handle}`
+    : user?.username
+    ? `@${user.username}`
+    : "@lumina.ai";
+  const avatar = author?.avatar || user?.picture_url || "https://i.pravatar.cc/100?img=1";
 
   const formatCount = (n: number): string => {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
     if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
     return String(n);
   };
+
+  const toMini = (p: PostItem): MiniPost => {
+    const sum = (Object.values(p?.interactions || {}) as number[]).reduce(
+      (a, b) => a + (typeof b === "number" ? b : 0),
+      0
+    );
+    return {
+      id: p.id,
+      thumbnail: p.thumbnail,
+      videoSrc: p.videoSrc,
+      views: sum,
+    };
+  };
+
+  const hasRealItems = Array.isArray(items) && items.length > 0;
+  const gridItems: MiniPost[] = hasRealItems
+    ? (items as PostItem[]).map(toMini)
+    : SAMPLE_GRID;
 
   return (
     <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
@@ -168,9 +197,14 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Empty state when fetched items exist but are empty */}
+            {Array.isArray(items) && items.length === 0 ? (
+              <div className="mt-6 text-center text-white/70">No posts yet.</div>
+            ) : null}
+
             {/* Grid */}
             <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-              {SAMPLE_GRID.map((p) => (
+              {gridItems.map((p) => (
                 <div
                   key={p.id}
                   className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20"
@@ -192,9 +226,11 @@ export default function ProfilePage() {
                     <span>{formatCount(p.views)}</span>
                   </div>
                   {/* Bottom-right duration */}
-                  <div className="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/70 text-[11px] border border-white/10">
-                    {p.duration}
-                  </div>
+                  {p.duration ? (
+                    <div className="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/70 text-[11px] border border-white/10">
+                      {p.duration}
+                    </div>
+                  ) : null}
                   {/* Center play overlay on hover */}
                   <div className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <div className="h-12 w-12 rounded-full bg-black/50 border border-white/10 grid place-items-center">

@@ -29,7 +29,7 @@ export default function Sidebar() {
     { icon: Radio, label: "Live", link: "/live" },
     { icon: Compass, label: "Explore", link: "/explore" },
     { icon: MessageCircle, label: "Messages", link: "/messages" },
-    { icon: User, label: "Profile", link: "/profile" },
+    { icon: User, label: "Profile", link: user?.username ? `/${user.username}` : "/profile" },
   ];
   const items = isLoggedIn
     ? itemsBase

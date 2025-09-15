@@ -169,7 +169,7 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  const protectedRoutes = ["/profile", "/settings", "/messages"];
+  const protectedRoutes = ["/settings", "/messages"];
 
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -185,5 +185,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/profile/:path*", "/settings/:path*", "/messages/:path*"],
+  matcher: ["/", "/settings/:path*", "/messages/:path*"],
 };

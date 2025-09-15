@@ -1,7 +1,13 @@
 "use client";
 import { useEffect } from "react";
 import { useDispatch, Provider } from "react-redux";
-import { setUsername, setId, setPictureUrl, setExp } from "@/store/userSlice";
+import {
+  setUsername,
+  setId,
+  setPictureUrl,
+  setExp,
+  setHandle,
+} from "@/store/userSlice";
 import store from "@/store/store";
 import useTokenRefresh from "@/hooks/useTokenRefresh";
 
@@ -10,6 +16,7 @@ interface ClientProviderProps {
   username: string;
   pictureUrl: string;
   exp: number;
+  handle: string;
   children: React.ReactNode;
 }
 
@@ -18,6 +25,7 @@ function UserProvider({
   username,
   pictureUrl,
   exp,
+  handle,
   children,
 }: ClientProviderProps) {
   const dispatch = useDispatch();
@@ -28,7 +36,8 @@ function UserProvider({
     dispatch(setUsername(username));
     dispatch(setPictureUrl(pictureUrl));
     dispatch(setExp(exp));
-  }, [id, username, pictureUrl, exp, dispatch]);
+    dispatch(setHandle(handle));
+  }, [id, username, pictureUrl, exp, handle, dispatch]);
 
   return <>{children}</>;
 }
@@ -38,6 +47,7 @@ export default function ClientProvider({
   username,
   pictureUrl,
   exp,
+  handle,
   children,
 }: ClientProviderProps) {
   return (
@@ -47,6 +57,7 @@ export default function ClientProvider({
         username={username}
         pictureUrl={pictureUrl}
         exp={exp}
+        handle={handle}
       >
         {children}
       </UserProvider>
