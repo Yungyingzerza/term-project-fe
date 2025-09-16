@@ -20,4 +20,12 @@ export interface PostItem {
     reaction?: ReactionKey | null;
     saved?: boolean | null;
   };
+  /** Visibility scope for the post (e.g. Public, Friends). */
+  visibility?: string;
+  /** Whether the author allows comments on the post. */
+  allowComments?: boolean;
+  /** ISO timestamp for when the post was created. */
+  createdAt?: string;
+  /** ISO timestamp for the last update to the post. */
+  updatedAt?: string;
 }

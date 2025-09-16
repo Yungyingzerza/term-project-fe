@@ -11,10 +11,21 @@ export interface FeedResponse {
   };
 }
 
+export interface PostByIdResponse {
+  item: PostItem;
+}
+
 export interface GetFeedParams {
   algo?: FeedAlgo;
   limit?: number;
   cursor?: string | null;
+  signal?: AbortSignal;
+  /** Optional cookie string for SSR (e.g., `accessToken=...; refreshToken=...`). */
+  cookie?: string;
+}
+
+export interface GetPostByIdParams {
+  postId: string;
   signal?: AbortSignal;
   /** Optional cookie string for SSR (e.g., `accessToken=...; refreshToken=...`). */
   cookie?: string;
@@ -65,6 +76,34 @@ export async function getFeed({ algo = "for-you", limit = 10, cursor, signal, co
   return data;
 }
 
+export async function getPostById({ postId, signal, cookie }: GetPostByIdParams): Promise<PostByIdResponse> {
+  const base = process.env.NEXT_PUBLIC_BASE_API as string;
+  const url = new URL(`/feed/${encodeURIComponent(postId)}`, base);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    const err = new Error(
+      `Failed to fetch post ${postId}: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`
+    ) as Error & { status?: number };
+    err.status = res.status;
+    throw err;
+  }
+
+  const data = (await res.json()) as PostByIdResponse;
+  return data;
+}
+
 export async function getFeedByUserHandle({ handle, limit = 10, cursor, signal, cookie }: GetUserFeedParams): Promise<UserFeedResponse> {
   const base = process.env.NEXT_PUBLIC_BASE_API as string;
   const url = new URL(`/feed/user/handle/${encodeURIComponent(handle)}`, base);
@@ -92,4 +131,3 @@ export async function getFeedByUserHandle({ handle, limit = 10, cursor, signal, 
   const data = (await res.json()) as UserFeedResponse;
   return data;
 }
-

@@ -22,6 +22,12 @@ export interface UseFeedOptions {
   cursor?: string | null;
   /** Whether the hook should fetch automatically. */
   enabled?: boolean;
+  /** Optional items to seed the feed with (e.g., from SSR). */
+  seedItems?: PostItem[];
+  /** Cursor to seed pagination state when providing initial items. */
+  seedCursor?: string | null;
+  /** Whether more data is expected after the seeded items. */
+  seedHasMore?: boolean;
 }
 
 // User feed by handle
@@ -48,12 +54,22 @@ export interface UseFeedResult {
  * React hook to manage paginated feed fetching with algo/limit/cursor.
  */
 export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
-  const { algo: initialAlgo = "for-you", limit = 10, cursor: initialCursor = null, enabled = true } = opts;
+  const {
+    algo: initialAlgo = "for-you",
+    limit = 10,
+    cursor: initialCursor = null,
+    enabled = true,
+    seedItems = [],
+    seedCursor = null,
+    seedHasMore = true,
+  } = opts;
 
   const [algo, setAlgo] = useState<FeedAlgo>(initialAlgo);
-  const [items, setItems] = useState<PostItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(initialCursor);
-  const [hasMore, setHasMore] = useState<boolean>(true);
+  const [items, setItems] = useState<PostItem[]>(seedItems);
+  const [nextCursor, setNextCursor] = useState<string | null>(
+    seedCursor ?? initialCursor
+  );
+  const [hasMore, setHasMore] = useState<boolean>(seedHasMore);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -74,8 +90,12 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
         setHasMore(!!data?.paging?.hasMore);
         setNextCursor(data?.paging?.nextCursor ?? null);
         setItems((prev) => (mode === "reset" ? data.items ?? [] : [...prev, ...(data.items ?? [])]));
-      } catch (e: any) {
-        if (e?.name === "AbortError") return; // canceled
+      } catch (e: unknown) {
+        const name =
+          typeof e === "object" && e !== null && "name" in e
+            ? (e as { name?: string }).name
+            : undefined;
+        if (name === "AbortError") return; // canceled
         setError(e instanceof Error ? e : new Error(String(e)));
       } finally {
         setLoading(false);
@@ -93,10 +113,10 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
   const reset = useCallback(() => {
     inFlight.current?.abort();
     setItems([]);
-    setNextCursor(null);
+    setNextCursor(initialCursor);
     setHasMore(true);
     setError(null);
-  }, []);
+  }, [initialCursor]);
 
   // Keep internal algo in sync with external option when it changes.
   useEffect(() => {
@@ -105,8 +125,8 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
 
   useEffect(() => {
     // Single controlled fetch per (algo, limit, enabled) change
-    reset();
     if (enabled) {
+      reset();
       void refetch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

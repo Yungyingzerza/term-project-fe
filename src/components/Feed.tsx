@@ -3,6 +3,16 @@ import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 import VideoCard from "./VideoCard";
 import { useFeed } from "@/hooks/useFeed";
+import type { FeedAlgo } from "@/hooks/useFeed";
+import type { PostItem } from "@/interfaces";
+
+interface FeedProps {
+  seedItems?: PostItem[];
+  seedCursor?: string | null;
+  seedHasMore?: boolean;
+  autoFetch?: boolean;
+  forcedAlgo?: FeedAlgo;
+}
 
 // How many items to preload relative to the active index
 // Increase these to buffer more videos at the cost of bandwidth/memory.
@@ -13,13 +23,28 @@ const PRELOAD_SECONDS = 3;
 
 // Data is now provided by useFeed hook; sample posts removed.
 
-export default function Feed() {
+export default function Feed({
+  seedItems = [],
+  seedCursor = null,
+  seedHasMore = true,
+  autoFetch = true,
+  forcedAlgo,
+}: FeedProps = {}) {
   const pathname = usePathname();
-  const initialAlgo = pathname?.startsWith("/following")
+  const derivedAlgo = forcedAlgo
+    ? forcedAlgo
+    : pathname?.startsWith("/following")
     ? "following"
     : "for-you";
   const { items, loading, error, fetchNext, hasMore, setAlgo, algo, refetch } =
-    useFeed({ algo: initialAlgo, limit: 8 });
+    useFeed({
+      algo: derivedAlgo,
+      limit: 8,
+      enabled: autoFetch,
+      seedItems,
+      seedCursor,
+      seedHasMore,
+    });
 
   const [index, setIndex] = useState<number>(0);
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -33,7 +58,9 @@ export default function Feed() {
 
   // Keep hook algo in sync with route changes
   useEffect(() => {
-    const nextAlgo = pathname?.startsWith("/following")
+    const nextAlgo = forcedAlgo
+      ? forcedAlgo
+      : pathname?.startsWith("/following")
       ? "following"
       : "for-you";
     if (nextAlgo !== algo) {
@@ -41,7 +68,7 @@ export default function Feed() {
       setIndex(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
+  }, [pathname, forcedAlgo]);
 
   //estimate network speed
   useEffect(() => {

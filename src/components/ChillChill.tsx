@@ -3,10 +3,26 @@ import BottomTabs from "./BottomTabs";
 import Feed from "./Feed";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/store/hooks";
+import type { FeedAlgo } from "@/hooks/useFeed";
+import type { PostItem } from "@/interfaces";
 
-export default function ChillChill() {
-  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
+interface ChillChillProps {
+  seedItems?: PostItem[];
+  seedCursor?: string | null;
+  seedHasMore?: boolean;
+  autoFetch?: boolean;
+  forcedAlgo?: FeedAlgo;
+}
+
+export default function ChillChill({
+  seedItems = [],
+  seedCursor = null,
+  seedHasMore = true,
+  autoFetch = true,
+  forcedAlgo,
+}: ChillChillProps = {}) {
+  const ambientColor = useAppSelector((s) => s.player.ambientColor);
   return (
     <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
       {/* Ambient overlay (YouTube-like). Uses a radial mask so background-color can transition smoothly */}
@@ -22,7 +38,13 @@ export default function ChillChill() {
       <TopBar />
       <div className="relative z-10 flex">
         <Sidebar />
-        <Feed />
+        <Feed
+          seedItems={seedItems}
+          seedCursor={seedCursor}
+          seedHasMore={seedHasMore}
+          autoFetch={autoFetch}
+          forcedAlgo={forcedAlgo}
+        />
       </div>
       <div className="relative z-10">
         <BottomTabs />
