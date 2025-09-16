@@ -2,16 +2,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PostItem } from "@/interfaces";
 import {
+  FeedAlgo,
   getFeed as getFeedApi,
   getFeedByUserHandle as getFeedByUserHandleApi,
+  GetFeedParams,
 } from "@/lib/api/feed";
-export type { FeedAlgo, FeedResponse, GetFeedParams, UserFeedResponse, GetUserFeedParams } from "@/lib/api/feed";
+export type {
+  FeedAlgo,
+  FeedResponse,
+  GetFeedParams,
+  UserFeedResponse,
+  GetUserFeedParams,
+} from "@/lib/api/feed";
 
 /**
  * Low-level fetcher for the feed endpoint.
  * GET /feed?algo=for-you|following&limit&cursor
  */
-export async function getFeed(params?: GetFeedParams): Promise<import("@/lib/api/feed").FeedResponse> {
+export async function getFeed(
+  params?: GetFeedParams
+): Promise<import("@/lib/api/feed").FeedResponse> {
   return getFeedApi(params);
 }
 
@@ -86,10 +96,17 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
       const ctrl = new AbortController();
       inFlight.current = ctrl;
       try {
-        const data = await getFeedApi({ algo, limit, cursor: mode === "reset" ? null : nextCursor, signal: ctrl.signal });
+        const data = await getFeedApi({
+          algo,
+          limit,
+          cursor: mode === "reset" ? null : nextCursor,
+          signal: ctrl.signal,
+        });
         setHasMore(!!data?.paging?.hasMore);
         setNextCursor(data?.paging?.nextCursor ?? null);
-        setItems((prev) => (mode === "reset" ? data.items ?? [] : [...prev, ...(data.items ?? [])]));
+        setItems((prev) =>
+          mode === "reset" ? data.items ?? [] : [...prev, ...(data.items ?? [])]
+        );
       } catch (e: unknown) {
         const name =
           typeof e === "object" && e !== null && "name" in e
@@ -138,7 +155,28 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
   useEffect(() => () => inFlight.current?.abort(), []);
 
   return useMemo(
-    () => ({ items, loading, error, algo, hasMore, nextCursor, refetch, fetchNext, reset, setAlgo }),
-    [items, loading, error, algo, hasMore, nextCursor, refetch, fetchNext, reset]
+    () => ({
+      items,
+      loading,
+      error,
+      algo,
+      hasMore,
+      nextCursor,
+      refetch,
+      fetchNext,
+      reset,
+      setAlgo,
+    }),
+    [
+      items,
+      loading,
+      error,
+      algo,
+      hasMore,
+      nextCursor,
+      refetch,
+      fetchNext,
+      reset,
+    ]
   );
 }
