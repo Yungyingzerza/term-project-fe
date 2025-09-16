@@ -54,6 +54,7 @@ export default function ActionRail({
   const [commentCount, setCommentCount] = useState<number>(comments);
   const [commentsOpen, setCommentsOpen] = useState<boolean>(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [shareCopied, setShareCopied] = useState<boolean>(false);
   const longPressTimer = useRef<number | null>(null);
   const closeTimer = useRef<number | null>(null);
   const [burst, setBurst] = useState<{ color: string; at: number } | null>(
@@ -104,6 +105,11 @@ export default function ActionRail({
   useEffect(() => setSaved(!!viewerSaved), [viewerSaved]);
   useEffect(() => setSavesCount(saves), [saves]);
   useEffect(() => setCommentCount(comments), [comments]);
+  useEffect(() => {
+    if (!shareCopied) return;
+    const timer = window.setTimeout(() => setShareCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [shareCopied]);
 
   // Derive top reactions (max 3) for a compact summary below the button
   const topReactions = (Object.keys(counts) as ReactionKey[])
@@ -267,6 +273,34 @@ export default function ActionRail({
     setReaction(k);
     const col = REACTIONS.find((r) => r.key === k)!.accent;
     setBurst({ color: col, at: Date.now() });
+  };
+
+  const copyShareLink = async () => {
+    const base =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_BASE_URL ?? "";
+    const normalizedBase = base.replace(/\/$/, "");
+    const shareUrl = `${normalizedBase}/feed/${postId}`;
+    try {
+      if (navigator?.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(shareUrl);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = shareUrl;
+        input.setAttribute("readonly", "");
+        input.style.position = "absolute";
+        input.style.left = "-9999px";
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+      setShareCopied(true);
+    } catch (err) {
+      console.error("Failed to copy share link", err);
+      setShareCopied(false);
+    }
   };
 
   return (
@@ -555,9 +589,18 @@ export default function ActionRail({
         </>
       ) : null}
 
-      <button className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
+      <button
+        onClick={copyShareLink}
+        className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+        aria-label={shareCopied ? "Link copied" : "Copy share link"}
+        title={shareCopied ? "Link copied" : "Copy video link"}
+        data-prevent-feed-swipe
+      >
         <Share2 className="w-6 h-6" />
       </button>
+      <div className="text-xs text-white/80 min-h-[1rem]" aria-live="polite">
+        {shareCopied ? "Copied" : ""}
+      </div>
 
       {/* Comments overlay */}
       <CommentsPanel
