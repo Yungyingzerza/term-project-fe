@@ -53,6 +53,9 @@ export default function VideoCard({
   const pendingSeekRef = useRef<number | null>(null);
   const volumeHideTimerRef = useRef<number | null>(null);
   const sliderValue = globalMuted ? 0 : Math.round(volume * 100);
+  const sliderRatio = sliderValue / 100;
+  const volumeBarRef = useRef<HTMLDivElement | null>(null);
+  const volumePointerIdRef = useRef<number | null>(null);
 
   const clearVolumeHideTimer = useCallback(() => {
     if (volumeHideTimerRef.current != null) {
@@ -84,6 +87,19 @@ export default function VideoCard({
     [dispatch]
   );
 
+  const setVolumeFromClientY = useCallback(
+    (clientY: number) => {
+      const bar = volumeBarRef.current;
+      if (!bar) return;
+      const rect = bar.getBoundingClientRect();
+      if (rect.height <= 0) return;
+      const ratio = clamp01((rect.bottom - clientY) / rect.height);
+      handleVolumeChange(ratio);
+      openVolumeTray();
+    },
+    [handleVolumeChange, openVolumeTray]
+  );
+
   const handleVolumePointerEnter = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (e.pointerType === "mouse") {
@@ -112,15 +128,21 @@ export default function VideoCard({
     [openVolumeTray, scheduleVolumeTrayClose]
   );
 
-  const handleSliderPointerDown = useCallback(() => {
-    setIsAdjustingVolume(true);
-    openVolumeTray();
-  }, [openVolumeTray]);
+  const handleSliderPointerDown = useCallback(
+    (pointerType: string) => {
+      setIsAdjustingVolume(true);
+      openVolumeTray();
+      if (pointerType !== "mouse") {
+        scheduleVolumeTrayClose(2000);
+      }
+    },
+    [openVolumeTray, scheduleVolumeTrayClose]
+  );
 
   const handleSliderPointerUp = useCallback(
-    (e?: ReactPointerEvent<HTMLInputElement>) => {
+    (pointerType?: string) => {
       setIsAdjustingVolume(false);
-      const delay = e?.pointerType === "mouse" ? 400 : 1500;
+      const delay = pointerType === "mouse" ? 400 : 1500;
       scheduleVolumeTrayClose(delay);
     },
     [scheduleVolumeTrayClose]
@@ -512,6 +534,36 @@ export default function VideoCard({
     };
   }, [isScrubbing]);
 
+  useEffect(() => {
+    if (!isAdjustingVolume) return;
+    const onMove = (e: PointerEvent) => {
+      setVolumeFromClientY(e.clientY);
+    };
+    const onUp = (e: PointerEvent) => {
+      setVolumeFromClientY(e.clientY);
+      handleSliderPointerUp(e.pointerType);
+      if (
+        volumePointerIdRef.current != null &&
+        e.pointerId === volumePointerIdRef.current
+      ) {
+        volumeBarRef.current?.releasePointerCapture?.(e.pointerId);
+        volumePointerIdRef.current = null;
+      }
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [
+    isAdjustingVolume,
+    handleSliderPointerUp,
+    setVolumeFromClientY,
+  ]);
+
   // Track when the primary video is actually ready to render frames.
   useEffect(() => {
     const v = videoRef.current;
@@ -815,40 +867,61 @@ export default function VideoCard({
                 : "pointer-events-none opacity-0 translate-y-1"
             }`}
           >
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={sliderValue}
-                aria-label="Volume"
-                className="w-32 h-2 accent-white cursor-pointer"
-                onChange={(e) => {
-                  const next = Number(e.target.value) / 100;
-                  handleVolumeChange(next);
-                  openVolumeTray();
+            <div className="flex items-end gap-4">
+              <div
+                ref={volumeBarRef}
+                className="relative h-32 w-12 cursor-pointer"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  volumePointerIdRef.current = e.pointerId;
+                  e.currentTarget.setPointerCapture?.(e.pointerId);
+                  handleSliderPointerDown(e.pointerType);
+                  setVolumeFromClientY(e.clientY);
                 }}
-                onInput={(e) => {
-                  const next = Number((e.target as HTMLInputElement).value) / 100;
-                  handleVolumeChange(next);
-                  openVolumeTray();
-                }}
-                onPointerDown={handleSliderPointerDown}
-                onPointerUp={(e) => handleSliderPointerUp(e)}
-                onPointerCancel={(e) => handleSliderPointerUp(e)}
-                onFocus={() => openVolumeTray()}
-                onBlur={() => scheduleVolumeTrayClose(400)}
-              />
-              <span className="text-xs font-medium text-white/80 min-w-[3ch] text-right">
-                {sliderValue}%
-              </span>
+              >
+                <div className="absolute inset-0 rounded-3xl border border-white/10 bg-white/5" />
+                <div className="absolute inset-x-[9px] top-3 bottom-3 rounded-full bg-white/12 overflow-hidden">
+                  <div
+                    className="absolute inset-x-0 bottom-0 h-full origin-bottom rounded-full bg-gradient-to-t from-white via-white to-white/70"
+                    style={{ transform: `scaleY(${sliderRatio})` }}
+                  />
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_75%)]" />
+                </div>
+                <div
+                  className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-black/30 bg-white shadow-[0_6px_16px_rgba(0,0,0,0.55)]"
+                  style={{
+                    bottom: `calc(${sliderRatio} * (100% - 24px) + 12px)`,
+                  }}
+                />
+              </div>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[11px] uppercase tracking-[0.18em] text-white/50">
+                  Volume
+                </span>
+                <span className="text-base font-semibold text-white">
+                  {sliderValue}%
+                </span>
+              </div>
             </div>
-            {globalMuted && (
-              <p className="mt-2 text-[11px] text-white/60">
-                Adjust the slider to unmute.
-              </p>
-            )}
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={sliderValue}
+              aria-label="Volume"
+              className="sr-only"
+              onChange={(e) => {
+                const next = Number(e.target.value) / 100;
+                handleVolumeChange(next);
+                openVolumeTray();
+              }}
+              onFocus={() => openVolumeTray()}
+              onBlur={() => scheduleVolumeTrayClose(400)}
+            />
+            <p className="mt-2 text-[11px] text-white/55">
+              Drag or tap the slider to set your volume.
+            </p>
           </div>
         </div>
         <button
