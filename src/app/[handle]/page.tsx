@@ -16,12 +16,12 @@ import {
 } from "@/lib/api/user";
 
 interface PageProps {
-  params: { handle: string };
+  params: Promise<{ handle: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export default async function HandleProfilePage(props: PageProps) {
-  const { params } = props;
+  const params = await props.params;
   const { handle } = params;
   const resolvedSearchParams = props.searchParams
     ? await props.searchParams

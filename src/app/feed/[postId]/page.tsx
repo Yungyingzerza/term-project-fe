@@ -6,9 +6,9 @@ import type { PostItem } from "@/interfaces";
 import { getFeed, getPostById } from "@/lib/api/feed";
 
 interface PageProps {
-  params: {
+  params: Promise<{
     postId: string;
-  };
+  }>;
 }
 
 async function fetchPost(postId: string, cookie: string | undefined): Promise<PostItem> {
@@ -28,7 +28,8 @@ async function fetchPost(postId: string, cookie: string | undefined): Promise<Po
   }
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata(props: PageProps): Promise<Metadata> {
+  const params = await props.params;
   const cookieStore = await cookies();
   const token = cookieStore.get("accessToken")?.value;
   try {
@@ -60,8 +61,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 }
-
-export default async function FeedPostPage({ params }: PageProps) {
+export default async function FeedPostPage(props: PageProps) {
+  const params = await props.params;
   const cookieStore = await cookies();
   const token = cookieStore.get("accessToken")?.value;
   const cookieHeader = token ? `accessToken=${token}` : undefined;
