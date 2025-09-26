@@ -448,7 +448,10 @@ export default function VideoCard({
     if (pv.readyState < 1) {
       const onMeta = () => {
         pv.removeEventListener("loadedmetadata", onMeta);
-        pv.currentTime = Math.max(0, Math.min(time, (pv.duration || 0) - 0.001));
+        pv.currentTime = Math.max(
+          0,
+          Math.min(time, (pv.duration || 0) - 0.001)
+        );
       };
       pv.addEventListener("loadedmetadata", onMeta);
       pv.load();
@@ -558,11 +561,7 @@ export default function VideoCard({
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [
-    isAdjustingVolume,
-    handleSliderPointerUp,
-    setVolumeFromClientY,
-  ]);
+  }, [isAdjustingVolume, handleSliderPointerUp, setVolumeFromClientY]);
 
   // Track when the primary video is actually ready to render frames.
   useEffect(() => {
@@ -827,9 +826,9 @@ export default function VideoCard({
             className="w-8 h-8 rounded-full border border-white/10"
           />
           <div>
-            <p className="font-semibold leading-tight">{post.user.handle}</p>
+            <p className="font-semibold leading-tight">{post.user.name}</p>
             <p className="text-xs text-white/60 leading-tight">
-              {post.user.name}
+              {post.user.handle}
             </p>
           </div>
           <button className="ml-2 text-xs px-3 py-1 rounded-full bg-white text-black font-semibold hover:opacity-90">
@@ -1005,7 +1004,11 @@ export default function VideoCard({
               ref={previewCanvasRef}
               width={previewSize.w}
               height={previewSize.h}
-              style={{ width: previewSize.w, height: previewSize.h, display: "block" }}
+              style={{
+                width: previewSize.w,
+                height: previewSize.h,
+                display: "block",
+              }}
             />
             {previewTime != null && (
               <div className="text-[10px] leading-none text-white/80 text-center mt-1">
