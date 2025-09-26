@@ -1,8 +1,9 @@
 "use client";
 import { MoreVertical, Pause, Play, Volume2, VolumeX } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { toggleMuted, setAmbientColor } from "@/store/playerSlice";
+import { toggleMuted, setAmbientColor, setVolume } from "@/store/playerSlice";
 import ActionRail from "./ActionRail";
 import MusicTicker from "./MusicTicker";
 import type { VideoCardProps } from "@/interfaces";
@@ -14,8 +15,9 @@ export default function VideoCard({
   preloadSeconds = 5,
 }: VideoCardProps) {
   const dispatch = useDispatch();
-  const muted = (useSelector((s: any) => s.player.muted) &&
-    isActive) as boolean;
+  const globalMuted = useSelector((s: any) => !!s.player.muted) as boolean;
+  const muted = (globalMuted && isActive) as boolean;
+  const volume = (useSelector((s: any) => s.player.volume) ?? 0.7) as number;
   const [playing, setPlaying] = useState<boolean>(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const bgVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -42,11 +44,87 @@ export default function VideoCard({
     w: 140,
     h: 248,
   });
+  const [volumeTrayOpen, setVolumeTrayOpen] = useState<boolean>(false);
+  const [isAdjustingVolume, setIsAdjustingVolume] = useState<boolean>(false);
   const playingBeforeScrubRef = useRef<boolean>(true);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const lastPreviewRequestRef = useRef<number>(0);
   const pendingSeekRef = useRef<number | null>(null);
+  const volumeHideTimerRef = useRef<number | null>(null);
+  const sliderValue = globalMuted ? 0 : Math.round(volume * 100);
+
+  const clearVolumeHideTimer = useCallback(() => {
+    if (volumeHideTimerRef.current != null) {
+      window.clearTimeout(volumeHideTimerRef.current);
+      volumeHideTimerRef.current = null;
+    }
+  }, []);
+
+  const openVolumeTray = useCallback(() => {
+    clearVolumeHideTimer();
+    setVolumeTrayOpen(true);
+  }, [clearVolumeHideTimer]);
+
+  const scheduleVolumeTrayClose = useCallback(
+    (delay = 800) => {
+      clearVolumeHideTimer();
+      volumeHideTimerRef.current = window.setTimeout(() => {
+        setVolumeTrayOpen(false);
+        volumeHideTimerRef.current = null;
+      }, delay);
+    },
+    [clearVolumeHideTimer]
+  );
+
+  const handleVolumeChange = useCallback(
+    (value: number) => {
+      dispatch(setVolume(value));
+    },
+    [dispatch]
+  );
+
+  const handleVolumePointerEnter = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse") {
+        openVolumeTray();
+      }
+    },
+    [openVolumeTray]
+  );
+
+  const handleVolumePointerLeave = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse" && !isAdjustingVolume) {
+        scheduleVolumeTrayClose(300);
+      }
+    },
+    [isAdjustingVolume, scheduleVolumeTrayClose]
+  );
+
+  const handleVolumeButtonPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLButtonElement>) => {
+      if (e.pointerType !== "mouse") {
+        openVolumeTray();
+        scheduleVolumeTrayClose(2000);
+      }
+    },
+    [openVolumeTray, scheduleVolumeTrayClose]
+  );
+
+  const handleSliderPointerDown = useCallback(() => {
+    setIsAdjustingVolume(true);
+    openVolumeTray();
+  }, [openVolumeTray]);
+
+  const handleSliderPointerUp = useCallback(
+    (e?: ReactPointerEvent<HTMLInputElement>) => {
+      setIsAdjustingVolume(false);
+      const delay = e?.pointerType === "mouse" ? 400 : 1500;
+      scheduleVolumeTrayClose(delay);
+    },
+    [scheduleVolumeTrayClose]
+  );
 
   // Track latest isActive in a ref to avoid stale closures in event handlers
   useEffect(() => {
@@ -65,10 +143,11 @@ export default function VideoCard({
     const v = videoRef.current;
     if (!v) return;
     v.muted = muted;
+    v.volume = Math.max(0, Math.min(1, volume));
     // Background video stays muted regardless
     const bg = bgVideoRef.current;
     if (bg) bg.muted = true;
-  }, [muted]);
+  }, [muted, volume]);
 
   // When becoming active, ensure playhead starts from 0 even if preloading advanced it
   useEffect(() => {
@@ -101,6 +180,21 @@ export default function VideoCard({
       if (bg) bg.pause();
     }
   }, [playing, isActive]);
+
+  useEffect(
+    () => () => {
+      clearVolumeHideTimer();
+    },
+    [clearVolumeHideTimer]
+  );
+
+  useEffect(() => {
+    if (!isActive) {
+      clearVolumeHideTimer();
+      setVolumeTrayOpen(false);
+      setIsAdjustingVolume(false);
+    }
+  }, [isActive, clearVolumeHideTimer]);
 
   // Ensure mute state matches global when becoming active (may override preload's temp mute)
   useEffect(() => {
@@ -697,16 +791,66 @@ export default function VideoCard({
       </div>
 
       <div className="absolute right-2 sm:right-4 top-2 sm:top-4 flex items-center gap-2 z-30">
-        <button
-          onClick={() => dispatch(toggleMuted())}
-          className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+        <div
+          className="relative"
+          onPointerEnter={handleVolumePointerEnter}
+          onPointerLeave={handleVolumePointerLeave}
         >
-          {muted ? (
-            <VolumeX className="w-5 h-5" />
-          ) : (
-            <Volume2 className="w-5 h-5" />
-          )}
-        </button>
+          <button
+            onClick={() => dispatch(toggleMuted())}
+            onPointerDown={handleVolumeButtonPointerDown}
+            className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+            aria-label={globalMuted ? "Unmute video" : "Mute video"}
+          >
+            {globalMuted ? (
+              <VolumeX className="w-5 h-5" />
+            ) : (
+              <Volume2 className="w-5 h-5" />
+            )}
+          </button>
+          <div
+            className={`absolute right-0 mt-2 w-44 rounded-2xl border border-white/10 bg-black/80 p-3 shadow-2xl transition-all duration-200 ease-out backdrop-blur-sm ${
+              volumeTrayOpen
+                ? "pointer-events-auto opacity-100 translate-y-0"
+                : "pointer-events-none opacity-0 translate-y-1"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={sliderValue}
+                aria-label="Volume"
+                className="w-32 h-2 accent-white cursor-pointer"
+                onChange={(e) => {
+                  const next = Number(e.target.value) / 100;
+                  handleVolumeChange(next);
+                  openVolumeTray();
+                }}
+                onInput={(e) => {
+                  const next = Number((e.target as HTMLInputElement).value) / 100;
+                  handleVolumeChange(next);
+                  openVolumeTray();
+                }}
+                onPointerDown={handleSliderPointerDown}
+                onPointerUp={(e) => handleSliderPointerUp(e)}
+                onPointerCancel={(e) => handleSliderPointerUp(e)}
+                onFocus={() => openVolumeTray()}
+                onBlur={() => scheduleVolumeTrayClose(400)}
+              />
+              <span className="text-xs font-medium text-white/80 min-w-[3ch] text-right">
+                {sliderValue}%
+              </span>
+            </div>
+            {globalMuted && (
+              <p className="mt-2 text-[11px] text-white/60">
+                Adjust the slider to unmute.
+              </p>
+            )}
+          </div>
+        </div>
         <button
           onClick={() => isActive && setPlaying((v) => !v)}
           className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60 disabled:opacity-50"
