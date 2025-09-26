@@ -1,9 +1,19 @@
 import { cookies } from "next/headers";
 import ProfilePage from "@/components/ProfilePage";
 import type { PostItem } from "@/interfaces/post";
-import type { UserMeta, UserProfileResponse } from "@/interfaces/user";
+import type {
+  SavedVideosResponse,
+  UserMeta,
+  UserProfileResponse,
+  UserReactionsResponse,
+} from "@/interfaces/user";
 import { getFeedByUserHandle } from "@/lib/api/feed";
-import { getUserIdByHandle, getUserProfile } from "@/lib/api/user";
+import {
+  getUserIdByHandle,
+  getUserProfile,
+  getUserReactions,
+  getUserSavedVideos,
+} from "@/lib/api/user";
 
 interface PageProps {
   params: { handle: string };
@@ -26,6 +36,8 @@ export default async function HandleProfilePage(props: PageProps) {
   let author: UserMeta | undefined;
   let profile: UserProfileResponse | undefined;
   let userId: string | undefined;
+  let reacted: UserReactionsResponse | undefined;
+  let saved: SavedVideosResponse | undefined;
 
   try {
     const lookup = await getUserIdByHandle(handle, {
@@ -43,6 +55,24 @@ export default async function HandleProfilePage(props: PageProps) {
       });
     } catch {
       // ignore errors; fallback to feed-derived info
+    }
+
+    try {
+      reacted = await getUserReactions(
+        { limit: 24 },
+        { cookie: token ? `accessToken=${token}` : undefined }
+      );
+    } catch {
+      // ignore if reacted videos not available
+    }
+
+    try {
+      saved = await getUserSavedVideos(
+        { limit: 24 },
+        { cookie: token ? `accessToken=${token}` : undefined }
+      );
+    } catch {
+      // ignore if saved videos not available
     }
   }
 
@@ -75,5 +105,13 @@ export default async function HandleProfilePage(props: PageProps) {
     };
   }
 
-  return <ProfilePage author={author} items={items} profile={profile} />;
+  return (
+    <ProfilePage
+      author={author}
+      items={items}
+      profile={profile}
+      reacted={reacted}
+      saved={saved}
+    />
+  );
 }

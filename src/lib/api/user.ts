@@ -1,7 +1,9 @@
 import type {
   FollowUserPayload,
+  SavedVideosResponse,
   UserHandleLookupResponse,
   UserProfileResponse,
+  UserReactionsResponse,
 } from "@/interfaces";
 
 interface RequestOptions {
@@ -107,4 +109,73 @@ export async function followUser(
   }
 
   return (await res.json()) as { message: string };
+}
+
+interface PaginationParams {
+  limit?: number;
+  cursor?: string | null;
+}
+
+export async function getUserSavedVideos(
+  params: PaginationParams = {},
+  { signal, cookie }: RequestOptions = {}
+): Promise<SavedVideosResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/saves/videos", base);
+  if (params.limit) url.searchParams.set("limit", String(params.limit));
+  if (params.cursor) url.searchParams.set("cursor", params.cursor);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch saved videos: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as SavedVideosResponse;
+}
+
+export async function getUserReactions(
+  params: PaginationParams = {},
+  { signal, cookie }: RequestOptions = {}
+): Promise<UserReactionsResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/reactions/videos", base);
+  if (params.limit) url.searchParams.set("limit", String(params.limit));
+  if (params.cursor) url.searchParams.set("cursor", params.cursor);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch reacted videos: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as UserReactionsResponse;
 }

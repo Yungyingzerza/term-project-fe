@@ -1,11 +1,17 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
 import { useSelector } from "react-redux";
 import type { PostItem } from "@/interfaces/post";
-import type { UserMeta, UserProfileResponse } from "@/interfaces/user";
+import type {
+  SavedVideosResponse,
+  UserMeta,
+  UserProfileResponse,
+  UserReactionsResponse,
+} from "@/interfaces/user";
 import { followUser } from "@/lib/api/user";
 import {
   Eye,
@@ -31,9 +37,17 @@ interface ProfilePageProps {
   author?: UserMeta;
   items?: PostItem[];
   profile?: UserProfileResponse;
+  reacted?: UserReactionsResponse;
+  saved?: SavedVideosResponse;
 }
 
-export default function ProfilePage({ author, items, profile }: ProfilePageProps) {
+export default function ProfilePage({
+  author,
+  items,
+  profile,
+  reacted,
+  saved,
+}: ProfilePageProps) {
   const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
   const user = useSelector((s: any) => s.user) as {
     id?: string;
@@ -63,6 +77,9 @@ export default function ProfilePage({ author, items, profile }: ProfilePageProps
   const postCount = profile?.post_count ?? (Array.isArray(items) ? items.length : 0);
   const [followError, setFollowError] = useState<string | null>(null);
   const [followBusy, setFollowBusy] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"videos" | "reactions" | "saves">(
+    "videos"
+  );
 
   useEffect(() => {
     setIsFollowing(Boolean(profile?.is_following));
@@ -116,9 +133,128 @@ export default function ProfilePage({ author, items, profile }: ProfilePageProps
   };
 
   const hasRealItems = Array.isArray(items) && items.length > 0;
-  const gridItems: MiniPost[] = hasRealItems
-    ? (items as PostItem[]).map(toMini)
-    : [];
+  const gridItems = hasRealItems ? (items as PostItem[]).map(toMini) : [];
+  const reactedItems = reacted?.items ?? [];
+  const savedItems = saved?.items ?? [];
+  const hasReactions = reactedItems.length > 0;
+  const hasSaves = savedItems.length > 0;
+  const visibleTabs = useMemo(() => {
+    const tabs: Array<{
+      key: "videos" | "reactions" | "saves";
+      label: string;
+      icon: typeof Clapperboard;
+    }> = [
+      { key: "videos", label: "Videos", icon: Clapperboard },
+    ];
+    if (hasReactions) tabs.push({ key: "reactions", label: "Reactions", icon: Heart });
+    if (hasSaves) tabs.push({ key: "saves", label: "Saves", icon: Bookmark });
+    return tabs;
+  }, [hasReactions, hasSaves]);
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.key === activeTab)) {
+      setActiveTab(visibleTabs[0]?.key ?? "videos");
+    }
+  }, [activeTab, visibleTabs]);
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString();
+  };
+
+  const renderVideos = () => {
+    if (Array.isArray(items) && items.length === 0) {
+      return <div className="mt-6 text-center text-white/70">No posts yet.</div>;
+    }
+    if (gridItems.length > 0) {
+      return (
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {gridItems.map((p) => (
+            <Link
+              key={p.id}
+              href={`/feed/${p.id}`}
+              prefetch={false}
+              className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 focus:outline-none focus:ring-2 focus:ring-white/20"
+              aria-label={`Open video ${p.id} with ${formatCount(p.views)} views`}
+            >
+              <img
+                src={p.thumbnail}
+                alt="thumbnail"
+                className="w-full aspect-[9/12] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                loading="lazy"
+              />
+              <div className="absolute top-2 right-2 z-10 px-2 py-1 rounded-md bg-black/60 border border-white/10 text-[11px] flex items-center gap-1">
+                <Eye className="w-3.5 h-3.5" />
+                <span>{formatCount(p.views)}</span>
+              </div>
+              {p.duration ? (
+                <div className="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/70 text-[11px] border border-white/10">
+                  {p.duration}
+                </div>
+              ) : null}
+              <div className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="h-12 w-12 rounded-full bg-black/50 border border-white/10 grid place-items-center">
+                  <Play className="w-5 h-5" />
+                </div>
+              </div>
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-100" />
+            </Link>
+          ))}
+        </div>
+      );
+    }
+    return <div className="mt-6 text-center text-white/70">No posts yet.</div>;
+  };
+
+  const renderReactions = () => {
+    if (!hasReactions) {
+      return <div className="mt-6 text-center text-white/70">No reacted videos yet.</div>;
+    }
+    return (
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {reactedItems.map((item) => (
+          <MiniHorizontalCard
+            key={item.reactionId}
+            title={item.post.caption || "Untitled"}
+            thumb={item.post.thumbnail}
+            meta={`${item.reactionKey.toUpperCase()} • ${formatDate(item.reactedAt)}`}
+            href={`/feed/${item.post.id}`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const renderSaves = () => {
+    if (!hasSaves) {
+      return <div className="mt-6 text-center text-white/70">No saved videos yet.</div>;
+    }
+    return (
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {savedItems.map((item) => (
+          <MiniHorizontalCard
+            key={item.postId}
+            title={item.post.caption || "Untitled"}
+            thumb={item.post.thumbnail}
+            meta={`Saved ${formatDate(item.savedAt)}`}
+            href={`/feed/${item.post.id}`}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const renderActiveContent = () => {
+    switch (activeTab) {
+      case "reactions":
+        return renderReactions();
+      case "saves":
+        return renderSaves();
+      default:
+        return renderVideos();
+    }
+  };
 
   return (
     <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
@@ -225,64 +361,29 @@ export default function ProfilePage({ author, items, profile }: ProfilePageProps
               ) : null}
 
               {/* Tabs */}
-              <div className="mt-5 flex items-center gap-2 border-t border-white/10 pt-3 text-sm">
-                <button className="cursor-pointer px-3 py-1.5 rounded-lg bg-white/10 border border-white/10 font-medium inline-flex items-center gap-1.5">
-                  <Clapperboard className="w-4 h-4" /> Videos
-                </button>
-                <button className="cursor-pointer px-3 py-1.5 rounded-lg hover:bg-white/5 border border-white/10 text-white/80 inline-flex items-center gap-1.5">
-                  <Heart className="w-4 h-4" /> Likes
-                </button>
-                <button className="cursor-pointer px-3 py-1.5 rounded-lg hover:bg-white/5 border border-white/10 text-white/80 inline-flex items-center gap-1.5">
-                  <Bookmark className="w-4 h-4" /> Saves
-                </button>
+              <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/10 pt-3 text-sm">
+                {visibleTabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`cursor-pointer px-3 py-1.5 rounded-lg border border-white/10 inline-flex items-center gap-1.5 transition ${
+                        isActive
+                          ? "bg-white text-black font-semibold"
+                          : "bg-white/5 text-white/80 hover:bg-white/10"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" /> {tab.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Empty state when fetched items exist but are empty */}
-            {Array.isArray(items) && items.length === 0 ? (
-              <div className="mt-6 text-center text-white/70">No posts yet.</div>
-            ) : null}
-
-            {/* Grid */}
-            {gridItems.length > 0 ? (
-              <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {gridItems.map((p) => (
-                  <div
-                    key={p.id}
-                    className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/20"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Open video ${p.id} with ${formatCount(p.views)} views`}
-                  >
-                    <img
-                      src={p.thumbnail}
-                      alt="thumbnail"
-                      className="w-full aspect-[9/12] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                      loading="lazy"
-                    />
-                  {/* Top-right views pill */}
-                  <div className="absolute top-2 right-2 z-10 px-2 py-1 rounded-md bg-black/60 border border-white/10 text-[11px] flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>{formatCount(p.views)}</span>
-                  </div>
-                  {/* Bottom-right duration */}
-                  {p.duration ? (
-                    <div className="absolute bottom-2 right-2 z-10 px-1.5 py-0.5 rounded bg-black/70 text-[11px] border border-white/10">
-                      {p.duration}
-                    </div>
-                  ) : null}
-                  {/* Center play overlay on hover */}
-                  <div className="pointer-events-none absolute inset-0 grid place-items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="h-12 w-12 rounded-full bg-black/50 border border-white/10 grid place-items-center">
-                      <Play className="w-5 h-5" />
-                    </div>
-                  </div>
-                  {/* Gradient overlay */}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-100" />
-                </div>
-                ))}
-              </div>
-            ) : null}
+            {renderActiveContent()}
           </section>
         </main>
       </div>
@@ -291,5 +392,32 @@ export default function ProfilePage({ author, items, profile }: ProfilePageProps
         <BottomTabs />
       </div>
     </div>
+  );
+}
+
+interface MiniHorizontalCardProps {
+  title: string;
+  thumb: string;
+  meta: string;
+  href: string;
+}
+
+function MiniHorizontalCard({ title, thumb, meta, href }: MiniHorizontalCardProps) {
+  return (
+    <Link
+      href={href}
+      prefetch={false}
+      className="flex items-center gap-3 rounded-xl border border-white/10 bg-neutral-900/70 p-3 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
+    >
+      <img
+        src={thumb || "https://via.placeholder.com/80x120?text=No+Image"}
+        alt={title}
+        className="h-20 w-16 rounded-lg object-cover"
+      />
+      <div className="min-w-0">
+        <p className="text-sm font-semibold line-clamp-2">{title}</p>
+        <p className="mt-1 text-xs text-white/60">{meta}</p>
+      </div>
+    </Link>
   );
 }
