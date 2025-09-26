@@ -35,7 +35,11 @@ export default function Sidebar() {
     { icon: Radio, label: "Live", link: "/live" },
     { icon: Compass, label: "Explore", link: "/explore" },
     { icon: MessageCircle, label: "Messages", link: "/messages" },
-    { icon: User, label: "Profile", link: user?.username ? `/${user.username}` : "/profile" },
+    {
+      icon: User,
+      label: "Profile",
+      link: user?.username ? `/${user.handle}` : "/profile",
+    },
   ];
   const items = isLoggedIn
     ? itemsBase
@@ -64,22 +68,25 @@ export default function Sidebar() {
                 ? pathname === "/"
                 : pathname === link || pathname.startsWith(link + "/");
             return (
-            <button
-              key={label}
-              onClick={() => handleNavigation(link)}
-              className={classNames(
-                "cursor-pointer w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition",
-                isActive && "bg-white/10"
-              )}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-sm font-medium">{label}</span>
-            </button>
-          );})}
+              <button
+                key={label}
+                onClick={() => handleNavigation(link)}
+                className={classNames(
+                  "cursor-pointer w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 transition",
+                  isActive && "bg-white/10"
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-sm font-medium">{label}</span>
+              </button>
+            );
+          })}
         </nav>
         {isLoggedIn ? (
           <div className="mt-6">
-            <p className="text-xs text-white/60 px-3 mb-2">Your Organizations</p>
+            <p className="text-xs text-white/60 px-3 mb-2">
+              Your Organizations
+            </p>
             {orgStatus === "loading" ? (
               <div className="text-sm text-white/60 px-3 py-2">
                 Loading organizations...
