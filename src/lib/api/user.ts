@@ -5,6 +5,8 @@ import type {
   UpdateHandleResponse,
   UpdateUsernamePayload,
   UpdateUsernameResponse,
+  UpdateProfilePicturePayload,
+  UpdateProfilePictureResponse,
   UserHandleLookupResponse,
   UserProfileResponse,
   UserReactionsResponse,
@@ -180,6 +182,37 @@ export async function updateUsername(
   }
 
   return (await res.json()) as UpdateUsernameResponse;
+}
+
+export async function updateProfilePicture(
+  payload: UpdateProfilePicturePayload,
+  { signal, cookie }: RequestOptions = {}
+): Promise<UpdateProfilePictureResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/profile/picture", base);
+
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify(payload),
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to update profile picture: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as UpdateProfilePictureResponse;
 }
 
 export async function sendEmailOtp(

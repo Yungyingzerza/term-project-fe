@@ -24,11 +24,13 @@ import {
 import {
   updateHandle as updateHandleApi,
   updateUsername as updateUsernameApi,
+  updateProfilePicture as updateProfilePictureApi,
   getEmails as getEmailsApi,
   sendEmailOtp,
   createEmail as createEmailApi,
   deleteEmail as deleteEmailApi,
 } from "@/lib/api/user";
+import { uploadProfileImage } from "@/lib/api/media";
 import type { UserEmail } from "@/interfaces/user";
 
 export default function SettingsPage() {
@@ -51,6 +53,8 @@ export default function SettingsPage() {
   const [savedBurst, setSavedBurst] = useState(false);
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const avatarObjectUrlRef = useRef<string | null>(null);
 
   const updateEmailsState = useCallback(
     (next: UserEmail[]) => {
@@ -60,11 +64,20 @@ export default function SettingsPage() {
     [dispatch]
   );
 
+  const clearAvatarObjectUrl = useCallback(() => {
+    if (avatarObjectUrlRef.current) {
+      URL.revokeObjectURL(avatarObjectUrlRef.current);
+      avatarObjectUrlRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     setUsernameLocal(user?.username || "");
     setHandleLocal(user?.handle || "");
+    clearAvatarObjectUrl();
+    setAvatarFile(null);
     setAvatarDataUrl(user?.picture_url || "");
-  }, [user?.username, user?.handle, user?.picture_url]);
+  }, [user?.username, user?.handle, user?.picture_url, clearAvatarObjectUrl]);
 
   const reloadEmails = useCallback(async () => {
     setEmailsLoading(true);
@@ -85,6 +98,8 @@ export default function SettingsPage() {
     void reloadEmails();
   }, [reloadEmails]);
 
+  useEffect(() => () => clearAvatarObjectUrl(), [clearAvatarObjectUrl]);
+
   // Local-only preferences (no backend yet)
   const [showActivity, setShowActivity] = useState(true);
   // Mentions disabled for now
@@ -94,14 +109,20 @@ export default function SettingsPage() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const onPickAvatar = () => avatarInputRef.current?.click();
   const onAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const url = String(reader.result || "");
-      setAvatarDataUrl(url);
-    };
-    reader.readAsDataURL(f);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    clearAvatarObjectUrl();
+    const previewUrl = URL.createObjectURL(file);
+    avatarObjectUrlRef.current = previewUrl;
+    setAvatarFile(file);
+    setAvatarDataUrl(previewUrl);
+    setAccountError(null);
+  };
+
+  const onRemoveAvatar = () => {
+    clearAvatarObjectUrl();
+    setAvatarFile(null);
+    setAvatarDataUrl("");
   };
 
   const onSaveAccount = async () => {
@@ -118,15 +139,31 @@ export default function SettingsPage() {
       trimmedUsername && trimmedUsername !== (user?.username || "");
     const needsHandleUpdate =
       normalizedHandle && normalizedHandle !== (user?.handle || "");
+    const hasAvatarFile = avatarFile != null;
+    const remoteAvatarChanged =
+      !hasAvatarFile &&
+      avatarDataUrl &&
+      avatarDataUrl !== (user?.picture_url || "");
 
     if (
       !needsUsernameUpdate &&
       !needsHandleUpdate &&
-      avatarDataUrl === user?.picture_url
+      !hasAvatarFile &&
+      avatarDataUrl === (user?.picture_url || "")
     ) {
       dispatch(setPictureUrl(avatarDataUrl));
       setSavedBurst(true);
       window.setTimeout(() => setSavedBurst(false), 1200);
+      return;
+    }
+
+    if (!hasAvatarFile && avatarDataUrl === "" && user?.picture_url) {
+      setAccountError("Upload a new profile image or keep the current one.");
+      return;
+    }
+
+    if (remoteAvatarChanged && !/^https?:/i.test(avatarDataUrl)) {
+      setAccountError("Please upload the image before saving.");
       return;
     }
 
@@ -143,8 +180,22 @@ export default function SettingsPage() {
         dispatch(setHandle(res.user.handle ?? normalizedHandle));
         setHandleLocal(res.user.handle ?? normalizedHandle);
       }
+      let latestPictureUrl = user?.picture_url || "";
+      if (hasAvatarFile && avatarFile) {
+        const res = await uploadProfileImage(avatarFile, {});
+        latestPictureUrl = res.pictureUrl;
+        clearAvatarObjectUrl();
+        setAvatarFile(null);
+        setAvatarDataUrl(res.pictureUrl);
+      } else if (remoteAvatarChanged && avatarDataUrl) {
+        const res = await updateProfilePictureApi({ pictureUrl: avatarDataUrl });
+        latestPictureUrl = res.user.picture_url || avatarDataUrl;
+        setAvatarDataUrl(latestPictureUrl);
+      } else {
+        latestPictureUrl = avatarDataUrl || user?.picture_url || "";
+      }
 
-      dispatch(setPictureUrl(avatarDataUrl));
+      dispatch(setPictureUrl(latestPictureUrl));
       setSavedBurst(true);
       window.setTimeout(() => setSavedBurst(false), 1200);
     } catch (error) {
@@ -245,7 +296,7 @@ export default function SettingsPage() {
                                 Choose image
                               </button>
                               <button
-                                onClick={() => setAvatarDataUrl("")}
+                                onClick={onRemoveAvatar}
                                 className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15"
                               >
                                 Remove
@@ -278,7 +329,10 @@ export default function SettingsPage() {
                           onClick={() => {
                             setUsernameLocal(user?.username || "");
                             setHandleLocal(user?.handle || "");
+                            clearAvatarObjectUrl();
+                            setAvatarFile(null);
                             setAvatarDataUrl(user?.picture_url || "");
+                            setAccountError(null);
                             void reloadEmails();
                           }}
                           className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5"

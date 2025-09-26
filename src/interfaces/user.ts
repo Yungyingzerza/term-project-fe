@@ -136,3 +136,64 @@ export interface UserReactionsResponse {
     nextCursor: string | null;
   };
 }
+
+export interface UpdateHandlePayload {
+  handle: string;
+}
+
+export interface UpdateHandleResponse {
+  message: string;
+  user: UserProfileUser;
+}
+
+export interface UpdateUsernamePayload {
+  username: string;
+}
+
+export interface UpdateUsernameResponse {
+  message: string;
+  user: UserProfileUser;
+}
+
+export interface UpdateProfilePicturePayload {
+  pictureUrl: string;
+}
+
+export interface UpdateProfilePictureResponse {
+  message: string;
+  user: UserProfileUser;
+}
+
+export interface SendEmailOtpPayload {
+  email: string;
+}
+
+export interface GenericMessageResponse {
+  message: string;
+}
+
+export interface CreateEmailPayload {
+  email: string;
+  otp: string;
+}
+
+export interface UserEmail {
+  _id: string;
+  email: string;
+  user_id: string;
+}
+
+export interface CreateEmailResponse {
+  message: string;
+  email: UserEmail;
+}
+
+export interface GetEmailsResponse {
+  emails: UserEmail[];
+}
+
+export interface UploadProfileImageResponse {
+  message: string;
+  pictureUrl: string;
+  user: UserProfileUser;
+}

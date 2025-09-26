@@ -1,5 +1,6 @@
 import axios, { type AxiosProgressEvent } from "axios";
 import type {
+  UploadProfileImageResponse,
   UploadVisibility,
   UploadVideoResponse,
 } from "@/interfaces";
@@ -50,6 +51,32 @@ export async function uploadVideo({
       }
     },
   });
+
+  return response.data;
+}
+
+export async function uploadProfileImage(
+  file: File,
+  { signal }: { signal?: AbortSignal } = {}
+): Promise<UploadProfileImageResponse> {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_API;
+  if (!baseUrl) {
+    throw new Error("NEXT_PUBLIC_BASE_API is not configured");
+  }
+
+  const url = new URL("/media/upload/profile", baseUrl);
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const response = await axios.post<UploadProfileImageResponse>(
+    url.toString(),
+    formData,
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+      signal,
+    }
+  );
 
   return response.data;
 }
