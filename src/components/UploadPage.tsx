@@ -4,7 +4,8 @@ import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
 import { useSelector } from "react-redux";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
-import { uploadVideo, type UploadVisibility } from "@/lib/api/media";
+import { uploadVideo } from "@/lib/api/media";
+import type { UploadVisibility } from "@/interfaces";
 import { isAxiosError } from "axios";
 import {
   Upload,

@@ -1,23 +1,50 @@
 import { cookies } from "next/headers";
 import ProfilePage from "@/components/ProfilePage";
 import type { PostItem } from "@/interfaces/post";
-import type { UserMeta } from "@/interfaces/user";
+import type { UserMeta, UserProfileResponse } from "@/interfaces/user";
 import { getFeedByUserHandle } from "@/lib/api/feed";
+import { getUserIdByHandle, getUserProfile } from "@/lib/api/user";
 
 interface PageProps {
   params: { handle: string };
-  searchParams?: { cursor?: string };
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function HandleProfilePage({ params, searchParams }: PageProps) {
+export default async function HandleProfilePage(props: PageProps) {
+  const { params } = props;
   const { handle } = params;
-  const cursor = searchParams?.cursor;
+  const resolvedSearchParams = props.searchParams
+    ? await props.searchParams
+    : undefined;
+  const cursorParam = resolvedSearchParams?.cursor;
+  const cursor = Array.isArray(cursorParam) ? cursorParam[0] : cursorParam;
 
   const cookieStore = await cookies();
   const token = cookieStore.get("accessToken")?.value;
 
   let items: PostItem[] = [];
   let author: UserMeta | undefined;
+  let profile: UserProfileResponse | undefined;
+  let userId: string | undefined;
+
+  try {
+    const lookup = await getUserIdByHandle(handle, {
+      cookie: token ? `accessToken=${token}` : undefined,
+    });
+    userId = lookup?.userId;
+  } catch {
+    // ignore; we can still attempt to render with fallback
+  }
+
+  if (userId) {
+    try {
+      profile = await getUserProfile(userId, {
+        cookie: token ? `accessToken=${token}` : undefined,
+      });
+    } catch {
+      // ignore errors; fallback to feed-derived info
+    }
+  }
 
   try {
     const data = await getFeedByUserHandle({
@@ -27,15 +54,26 @@ export default async function HandleProfilePage({ params, searchParams }: PagePr
       cookie: token ? `accessToken=${token}` : undefined,
     });
     items = (data?.items as PostItem[]) || [];
-    if (items.length > 0) {
-      author = items[0].user as UserMeta;
-    } else {
-      author = { handle, name: handle, avatar: "https://i.pravatar.cc/100?img=1" };
-    }
   } catch {
-    // Network/other errors: render page with minimal info
-    author = { handle, name: handle, avatar: "https://i.pravatar.cc/100?img=1" };
+    // ignore; we can still render profile info if available
   }
 
-  return <ProfilePage author={author} items={items} />;
+  if (items.length > 0) {
+    author = items[0].user as UserMeta;
+  } else if (profile?.user) {
+    const u = profile.user;
+    author = {
+      handle: u.handle || handle,
+      name: u.username || u.handle || handle,
+      avatar: u.picture_url || "https://i.pravatar.cc/100?img=1",
+    };
+  } else {
+    author = {
+      handle,
+      name: handle,
+      avatar: "https://i.pravatar.cc/100?img=1",
+    };
+  }
+
+  return <ProfilePage author={author} items={items} profile={profile} />;
 }
