@@ -4,6 +4,8 @@ import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
 import { useSelector } from "react-redux";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
+import { uploadVideo, type UploadVisibility } from "@/lib/api/media";
+import { isAxiosError } from "axios";
 import {
   Upload,
   Video,
@@ -16,9 +18,9 @@ import {
   Building2,
   Search,
 } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
-type Visibility = "Public" | "Friends" | "Private" | "Organizations";
+type Visibility = UploadVisibility;
 
 export default function UploadPage() {
   const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
@@ -30,9 +32,14 @@ export default function UploadPage() {
   const [isPosting, setIsPosting] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [postOrgs, setPostOrgs] = useState<string[]>([]);
-  const [viewOrgs, setViewOrgs] = useState<string[]>([]);
   const [postOrgQuery, setPostOrgQuery] = useState("");
   const { organizations, status: organizationsStatus } = useUserOrganizations();
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "success" | "error"
+  >("idle");
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const previewUrl = useMemo(() => {
     if (!file) return "";
@@ -61,21 +68,59 @@ export default function UploadPage() {
 
   const onRemove = () => setFile(null);
 
+  const closeProgressModal = useCallback(() => {
+    setProgressModalOpen(false);
+    setUploadStatus("idle");
+    setUploadProgress(0);
+    setUploadError(null);
+  }, []);
+
   const onPost = async () => {
     if (!file) return;
+    const selectedOrgIds = postOrgs;
+    if (visibility === "Organizations" && selectedOrgIds.length === 0) {
+      setUploadError("Select at least one organization");
+      setUploadStatus("error");
+      setProgressModalOpen(true);
+      setUploadProgress(0);
+      return;
+    }
+
     setIsPosting(true);
+    setUploadError(null);
+    setUploadStatus("uploading");
+    setUploadProgress(0);
+    setProgressModalOpen(true);
+
     try {
-      // Placeholder: simulate upload
-      await new Promise((r) => setTimeout(r, 1200));
-      // eslint-disable-next-line no-console
-      console.log("Posted:", {
-        file: file.name,
+      await uploadVideo({
+        file,
         caption,
         visibility,
         allowComments,
-        postOrgs,
-        viewOrgs: visibility === "Organizations" ? viewOrgs : undefined,
+        music: "",
+        orgIds: selectedOrgIds,
+        onUploadProgress: (percent) => setUploadProgress(percent),
       });
+
+      setUploadStatus("success");
+      setUploadProgress(100);
+      setFile(null);
+      setCaption("");
+      setPostOrgs([]);
+      setPostOrgQuery("");
+
+      window.setTimeout(() => {
+        closeProgressModal();
+      }, 1200);
+    } catch (error: unknown) {
+      const message = isAxiosError(error)
+        ? error.response?.data?.message ?? error.message
+        : error instanceof Error
+        ? error.message
+        : "Failed to upload";
+      setUploadError(message);
+      setUploadStatus("error");
     } finally {
       setIsPosting(false);
     }
@@ -91,24 +136,25 @@ export default function UploadPage() {
   ];
 
   return (
-    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
-      {/* Ambient overlay to match ModernTok */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
-        style={{
-          backgroundColor: ambientColor,
-          opacity: 0.5,
-          filter: "blur(60px)",
-        }}
-      />
+    <>
+      <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+        {/* Ambient overlay to match ModernTok */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
+          style={{
+            backgroundColor: ambientColor,
+            opacity: 0.5,
+            filter: "blur(60px)",
+          }}
+        />
 
-      <TopBar />
+        <TopBar />
 
-      <div className="relative z-10 flex flex-1">
-        <Sidebar />
+        <div className="relative z-10 flex flex-1">
+          <Sidebar />
 
-        <main className="flex-1">
+          <main className="flex-1">
           <section className="max-w-7xl mx-auto px-4 py-6">
             {/* Header */}
             <div className="flex items-center gap-2 mb-5">
@@ -354,7 +400,7 @@ export default function UploadPage() {
                         !file ||
                         isPosting ||
                         (visibility === "Organizations" &&
-                          viewOrgs.length === 0)
+                          postOrgs.length === 0)
                       }
                       className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold disabled:opacity-50 inline-flex items-center gap-1.5"
                     >
@@ -395,5 +441,51 @@ export default function UploadPage() {
         <BottomTabs />
       </div>
     </div>
+      {progressModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-neutral-900/80 p-6 shadow-2xl">
+            <h2 className="text-lg font-semibold">
+              {uploadStatus === "success"
+                ? "Upload complete"
+                : uploadStatus === "error"
+                ? "Upload failed"
+                : "Uploading video"}
+            </h2>
+            <div className="mt-4">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-white transition-all duration-300 ease-out"
+                  style={{
+                    width: `${uploadStatus === "success" ? 100 : uploadProgress}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-2 text-sm text-white/70">
+                {uploadStatus === "error"
+                  ? uploadError ?? "Something went wrong."
+                  : `${uploadStatus === "success" ? 100 : uploadProgress}%`}
+              </p>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              {uploadStatus === "uploading" ? (
+                <button
+                  className="cursor-not-allowed rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-sm text-white/60"
+                  disabled
+                >
+                  Uploading…
+                </button>
+              ) : (
+                <button
+                  onClick={closeProgressModal}
+                  className="cursor-pointer rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
