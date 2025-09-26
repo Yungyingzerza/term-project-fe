@@ -5,3 +5,4 @@ export * from "./action-rail";
 export * from "./music-ticker";
 export * from "./video-card";
 export * from "./comments";
+export * from "./organization";

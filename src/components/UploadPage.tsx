@@ -3,6 +3,7 @@ import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
 import { useSelector } from "react-redux";
+import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import {
   Upload,
   Video,
@@ -31,14 +32,7 @@ export default function UploadPage() {
   const [postOrgs, setPostOrgs] = useState<string[]>([]);
   const [viewOrgs, setViewOrgs] = useState<string[]>([]);
   const [postOrgQuery, setPostOrgQuery] = useState("");
-
-  const ORGS = [
-    { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
-    { name: "Vercel", logo: "https://logo.clearbit.com/vercel.com" },
-    { name: "GitHub", logo: "https://logo.clearbit.com/github.com" },
-    { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
-    { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
-  ];
+  const { organizations, status: organizationsStatus } = useUserOrganizations();
 
   const previewUrl = useMemo(() => {
     if (!file) return "";
@@ -47,9 +41,11 @@ export default function UploadPage() {
 
   const filteredPostChoices = useMemo(() => {
     const q = postOrgQuery.toLowerCase().trim();
-    if (!q) return ORGS;
-    return ORGS.filter((o) => o.name.toLowerCase().includes(q));
-  }, [postOrgQuery]);
+    if (!q) return organizations;
+    return organizations.filter((o) =>
+      o.name.toLowerCase().includes(q)
+    );
+  }, [organizations, postOrgQuery]);
 
   const onPickFile = () => inputRef.current?.click();
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -202,15 +198,15 @@ export default function UploadPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {filteredPostChoices.map((o) => {
-                        const active = postOrgs.includes(o.name);
+                        const active = postOrgs.includes(o._id);
                         return (
                           <button
-                            key={o.name}
+                            key={o._id}
                             onClick={() =>
                               setPostOrgs((prev) =>
-                                prev.includes(o.name)
-                                  ? prev.filter((n) => n !== o.name)
-                                  : [...prev, o.name]
+                                prev.includes(o._id)
+                                  ? prev.filter((n) => n !== o._id)
+                                  : [...prev, o._id]
                               )
                             }
                             className={`cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm ${
@@ -219,18 +215,26 @@ export default function UploadPage() {
                                 : "bg-white/5 border-white/10 hover:bg-white/10"
                             }`}
                           >
-                            <img
-                              src={o.logo}
-                              alt={o.name}
-                              className="w-4 h-4 rounded"
-                            />
+                            {o.logo_url ? (
+                              <img
+                                src={o.logo_url}
+                                alt={o.name}
+                                className="w-4 h-4 rounded object-cover"
+                              />
+                            ) : (
+                              <div className="w-4 h-4 rounded bg-white/10 border border-white/10 grid place-items-center text-[10px] font-semibold">
+                                {o.name?.[0]?.toUpperCase() ?? "?"}
+                              </div>
+                            )}
                             {o.name}
                           </button>
                         );
                       })}
                       {filteredPostChoices.length === 0 && (
                         <div className="text-sm text-white/60 px-1.5 py-1">
-                          No organizations found
+                          {organizationsStatus === "loading"
+                            ? "Loading organizations..."
+                            : "No organizations found"}
                         </div>
                       )}
                     </div>

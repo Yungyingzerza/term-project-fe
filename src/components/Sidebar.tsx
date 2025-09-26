@@ -11,6 +11,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setAmbientColor } from "@/store/playerSlice";
 import { usePathname, useRouter } from "next/navigation";
+import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 
 function classNames(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(" ");
@@ -22,6 +23,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const user = useAppSelector((s) => s.user);
   const isLoggedIn = !!(user?.id || user?.username);
+  const {
+    organizations,
+    status: orgStatus,
+    error: orgError,
+  } = useUserOrganizations({ enabled: isLoggedIn });
 
   const itemsBase = [
     { icon: Home, label: "For You", link: "/" },
@@ -36,14 +42,6 @@ export default function Sidebar() {
     : itemsBase.filter(
         (i) => !["Following", "Messages", "Profile"].includes(i.label)
       );
-  const orgs = [
-    { name: "OpenAI", logo: "https://logo.clearbit.com/openai.com" },
-    { name: "Vercel", logo: "https://logo.clearbit.com/vercel.com" },
-    { name: "GitHub", logo: "https://logo.clearbit.com/github.com" },
-    { name: "Stripe", logo: "https://logo.clearbit.com/stripe.com" },
-    { name: "Notion", logo: "https://logo.clearbit.com/notion.so" },
-  ];
-
   //handle navigation
   const handleNavigation = (link: string) => {
     //reset ambient color on navigation
@@ -82,21 +80,41 @@ export default function Sidebar() {
         {isLoggedIn ? (
           <div className="mt-6">
             <p className="text-xs text-white/60 px-3 mb-2">Your Organizations</p>
-            {orgs.map((org) => (
-              <div
-                key={org.name}
-                className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
-              >
-                <img
-                  src={org.logo}
-                  alt={`${org.name} logo`}
-                  className="w-8 h-8 rounded"
-                />
-                <div className="ml-3 leading-tight">
-                  <p className="text-sm font-semibold">{org.name}</p>
-                </div>
+            {orgStatus === "loading" ? (
+              <div className="text-sm text-white/60 px-3 py-2">
+                Loading organizations...
               </div>
-            ))}
+            ) : orgStatus === "failed" ? (
+              <div className="text-sm text-red-400 px-3 py-2">
+                {orgError || "Unable to load organizations"}
+              </div>
+            ) : organizations.length > 0 ? (
+              organizations.map((org) => (
+                <div
+                  key={org._id}
+                  className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
+                >
+                  {org.logo_url ? (
+                    <img
+                      src={org.logo_url}
+                      alt={`${org.name} logo`}
+                      className="w-8 h-8 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded bg-white/10 border border-white/10 grid place-items-center text-sm font-semibold">
+                      {org.name?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  <div className="ml-3 leading-tight">
+                    <p className="text-sm font-semibold">{org.name}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-white/60 px-3 py-2">
+                No organizations yet
+              </div>
+            )}
           </div>
         ) : null}
       </div>
