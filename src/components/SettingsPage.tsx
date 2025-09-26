@@ -13,29 +13,77 @@ import {
   UserCog,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction, KeyboardEvent } from "react";
-import { setPictureUrl, setUsername, setEmails } from "@/store/userSlice";
+import {
+  setPictureUrl,
+  setUsername,
+  setEmails,
+  setHandle,
+} from "@/store/userSlice";
+import {
+  updateHandle as updateHandleApi,
+  updateUsername as updateUsernameApi,
+  getEmails as getEmailsApi,
+  sendEmailOtp,
+  createEmail as createEmailApi,
+  deleteEmail as deleteEmailApi,
+} from "@/lib/api/user";
+import type { UserEmail } from "@/interfaces/user";
 
 export default function SettingsPage() {
   const dispatch = useDispatch();
   const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
   const user = useSelector((s: any) => s.user) as {
+    id?: string;
     username: string;
+    handle?: string;
     picture_url: string;
     emails?: string[];
   };
 
   const [username, setUsernameLocal] = useState(user?.username || "");
+  const [handle, setHandleLocal] = useState(user?.handle || "");
   const [avatarDataUrl, setAvatarDataUrl] = useState(user?.picture_url || "");
-  const [emails, setEmailsLocal] = useState<string[]>(user?.emails || []);
+  const [emails, setEmailsLocal] = useState<UserEmail[]>([]);
+  const [emailsLoading, setEmailsLoading] = useState<boolean>(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [savedBurst, setSavedBurst] = useState(false);
+  const [accountSaving, setAccountSaving] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+
+  const updateEmailsState = useCallback(
+    (next: UserEmail[]) => {
+      setEmailsLocal(next);
+      dispatch(setEmails(next.map((e) => e.email)));
+    },
+    [dispatch]
+  );
 
   useEffect(() => {
     setUsernameLocal(user?.username || "");
+    setHandleLocal(user?.handle || "");
     setAvatarDataUrl(user?.picture_url || "");
-    setEmailsLocal(user?.emails || []);
-  }, [user?.username, user?.picture_url, user?.emails]);
+  }, [user?.username, user?.handle, user?.picture_url]);
+
+  const reloadEmails = useCallback(async () => {
+    setEmailsLoading(true);
+    setEmailError(null);
+    try {
+      const data = await getEmailsApi();
+      updateEmailsState(data.emails);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load emails";
+      setEmailError(message);
+    } finally {
+      setEmailsLoading(false);
+    }
+  }, [updateEmailsState]);
+
+  useEffect(() => {
+    void reloadEmails();
+  }, [reloadEmails]);
 
   // Local-only preferences (no backend yet)
   const [showActivity, setShowActivity] = useState(true);
@@ -56,13 +104,56 @@ export default function SettingsPage() {
     reader.readAsDataURL(f);
   };
 
-  const onSaveAccount = () => {
-    dispatch(setUsername(username));
-    dispatch(setPictureUrl(avatarDataUrl));
-    dispatch(setEmails(emails));
-    setSavedBurst(true);
-    const t = setTimeout(() => setSavedBurst(false), 1200);
-    return () => clearTimeout(t);
+  const onSaveAccount = async () => {
+    const trimmedUsername = username.trim();
+    const sanitizedHandle = handle.trim().replace(/^@+/, "");
+    const normalizedHandle = sanitizedHandle.toLowerCase();
+
+    if (!sanitizedHandle) {
+      setAccountError("Handle is required.");
+      return;
+    }
+
+    const needsUsernameUpdate =
+      trimmedUsername && trimmedUsername !== (user?.username || "");
+    const needsHandleUpdate =
+      normalizedHandle && normalizedHandle !== (user?.handle || "");
+
+    if (
+      !needsUsernameUpdate &&
+      !needsHandleUpdate &&
+      avatarDataUrl === user?.picture_url
+    ) {
+      dispatch(setPictureUrl(avatarDataUrl));
+      setSavedBurst(true);
+      window.setTimeout(() => setSavedBurst(false), 1200);
+      return;
+    }
+
+    setAccountSaving(true);
+    setAccountError(null);
+    try {
+      if (needsUsernameUpdate) {
+        const res = await updateUsernameApi({ username: trimmedUsername });
+        dispatch(setUsername(res.user.username ?? trimmedUsername));
+      }
+
+      if (needsHandleUpdate) {
+        const res = await updateHandleApi({ handle: normalizedHandle });
+        dispatch(setHandle(res.user.handle ?? normalizedHandle));
+        setHandleLocal(res.user.handle ?? normalizedHandle);
+      }
+
+      dispatch(setPictureUrl(avatarDataUrl));
+      setSavedBurst(true);
+      window.setTimeout(() => setSavedBurst(false), 1200);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to save account";
+      setAccountError(message);
+    } finally {
+      setAccountSaving(false);
+    }
   };
 
   return (
@@ -115,7 +206,7 @@ export default function SettingsPage() {
                         <UserCog className="w-4 h-4 text-white/80" />
                         <h2 className="font-semibold">Account</h2>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-sm text-white/80 mb-1">
                             Display name
@@ -126,6 +217,20 @@ export default function SettingsPage() {
                             placeholder="Your name"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
                           />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-white/80 mb-1">
+                            Handle
+                          </label>
+                          <div className="flex rounded-xl border border-white/10 bg-white/5 focus-within:border-white/20">
+                            <span className="px-3 py-2 text-sm text-white/60">@</span>
+                            <input
+                              value={handle}
+                              onChange={(e) => setHandleLocal(e.target.value)}
+                              placeholder="handle"
+                              className="w-full bg-transparent rounded-r-xl px-3 py-2 outline-none"
+                            />
+                          </div>
                         </div>
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
@@ -157,25 +262,38 @@ export default function SettingsPage() {
                         </div>
                         <EmailsEditor
                           emails={emails}
-                          setEmails={setEmailsLocal}
+                          onEmailsChange={updateEmailsState}
+                          loading={emailsLoading}
+                          error={emailError}
+                          setError={setEmailError}
                         />
                       </div>
                       <div className="mt-3 flex items-center gap-2 justify-end">
+                        {accountError ? (
+                          <span className="mr-auto text-xs text-rose-400">
+                            {accountError}
+                          </span>
+                        ) : null}
                         <button
                           onClick={() => {
                             setUsernameLocal(user?.username || "");
+                            setHandleLocal(user?.handle || "");
                             setAvatarDataUrl(user?.picture_url || "");
-                            setEmailsLocal(user?.emails || []);
+                            void reloadEmails();
                           }}
                           className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5"
                         >
                           <X className="w-4 h-4" /> Reset
                         </button>
                         <button
-                          onClick={onSaveAccount}
-                          className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold inline-flex items-center gap-1.5 relative"
+                          onClick={() => {
+                            void onSaveAccount();
+                          }}
+                          disabled={accountSaving}
+                          className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold inline-flex items-center gap-1.5 relative disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          <Save className="w-4 h-4" /> Save
+                          <Save className="w-4 h-4" />
+                          {accountSaving ? "Saving" : "Save"}
                           {savedBurst && (
                             <span
                               aria-hidden
@@ -257,86 +375,206 @@ export default function SettingsPage() {
 
 function EmailsEditor({
   emails,
-  setEmails,
+  onEmailsChange,
+  loading,
+  error,
+  setError,
 }: {
-  emails: string[];
-  setEmails: Dispatch<SetStateAction<string[]>>;
+  emails: UserEmail[];
+  onEmailsChange: (emails: UserEmail[]) => void;
+  loading: boolean;
+  error: string | null;
+  setError: Dispatch<SetStateAction<string | null>>;
 }) {
   const [newEmail, setNewEmail] = useState("");
-  const [error, setError] = useState("");
+  const [otpEmail, setOtpEmail] = useState<string | null>(null);
+  const [otpValue, setOtpValue] = useState("");
+  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(
+    null
+  );
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const isValidEmail = (val: string) => {
     const e = val.trim().toLowerCase();
-    // Simple RFC5322-ish check; good enough for UI validation
     return /[^\s@]+@[^\s@]+\.[^\s@]+/.test(e);
   };
 
-  const addEmail = () => {
-    const e = newEmail.trim().toLowerCase();
-    if (!e) return;
-    if (!isValidEmail(e)) {
-      setError("Enter a valid email address.");
+  const handleSendOtp = async () => {
+    const email = newEmail.trim().toLowerCase();
+    setStatus(null);
+    setError(null);
+    if (!email) return;
+    if (!isValidEmail(email)) {
+      setStatus({ type: "error", message: "Enter a valid email address." });
       return;
     }
-    if (emails.includes(e)) {
-      setError("Email already added.");
+    if (emails.some((e) => e.email.toLowerCase() === email)) {
+      setStatus({ type: "error", message: "Email already added." });
       return;
     }
-    setEmails((prev) => [...prev, e]);
-    setNewEmail("");
-    setError("");
+    setSendingOtp(true);
+    try {
+      await sendEmailOtp({ email });
+      setOtpEmail(email);
+      setStatus({
+        type: "success",
+        message: `Verification code sent to ${email}. It expires in 5 minutes.`,
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to send verification code.";
+      setStatus({ type: "error", message });
+    } finally {
+      setSendingOtp(false);
+    }
   };
 
-  const removeEmail = (e: string) => {
-    setEmails((prev) => prev.filter((x) => x !== e));
+  const handleVerifyOtp = async () => {
+    if (!otpEmail) return;
+    const otp = otpValue.trim();
+    setStatus(null);
+    setError(null);
+    if (!otp) {
+      setStatus({ type: "error", message: "Enter the 6-digit code." });
+      return;
+    }
+    setVerifyingOtp(true);
+    try {
+      const res = await createEmailApi({ email: otpEmail, otp });
+      onEmailsChange([...emails, res.email]);
+      setStatus({ type: "success", message: "Email added successfully." });
+      setNewEmail("");
+      setOtpEmail(null);
+      setOtpValue("");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to verify code.";
+      setStatus({ type: "error", message });
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleDeleteEmail = async (emailId: string) => {
+    setStatus(null);
+    setError(null);
+    setDeletingId(emailId);
+    try {
+      await deleteEmailApi(emailId);
+      onEmailsChange(emails.filter((e) => e._id !== emailId));
+      setStatus({ type: "success", message: "Email removed." });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to remove email.";
+      setStatus({ type: "error", message });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const onKeyDown = (evt: KeyboardEvent<HTMLInputElement>) => {
     if (evt.key === "Enter") {
       evt.preventDefault();
-      addEmail();
+      if (otpEmail) {
+        void handleVerifyOtp();
+      } else {
+        void handleSendOtp();
+      }
     }
   };
 
   return (
-    <div className="md:col-span-2">
+    <div className="md:col-span-3">
       <label className="block text-sm text-white/80 mb-1">Emails</label>
-      <div className="flex gap-2">
-        <input
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder="you@company.com"
-          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
-          type="email"
-        />
-        <button
-          onClick={addEmail}
-          className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
-        >
-          Add
-        </button>
-      </div>
-      {error && <p className="mt-1 text-xs text-red-300">{error}</p>}
-      <div className="mt-2 flex flex-wrap gap-2">
-        {emails.map((e) => (
-          <span
-            key={e}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-sm"
-          >
-            {e}
+      <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-neutral-950/40 p-3">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="you@company.com"
+            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
+            type="email"
+            disabled={sendingOtp || verifyingOtp}
+          />
+          <div className="flex gap-2">
             <button
-              onClick={() => removeEmail(e)}
-              className="cursor-pointer inline-flex items-center justify-center w-5 h-5 rounded-md bg-black/40 border border-white/10"
-              title="Remove"
+              onClick={() => {
+                void handleSendOtp();
+              }}
+              disabled={sendingOtp || verifyingOtp}
+              className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <X className="w-3.5 h-3.5" />
+              {sendingOtp ? "Sending…" : "Send code"}
             </button>
-          </span>
-        ))}
-        {emails.length === 0 && (
-          <span className="text-sm text-white/60">No emails added yet.</span>
-        )}
+            {otpEmail ? (
+              <button
+                onClick={() => {
+                  void handleVerifyOtp();
+                }}
+                disabled={verifyingOtp}
+                className="cursor-pointer px-3 py-2 rounded-xl bg-emerald-500/90 text-black font-semibold hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {verifyingOtp ? "Verifying…" : "Verify"}
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {otpEmail ? (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              value={otpValue}
+              onChange={(e) => setOtpValue(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Enter 6-digit code"
+              className="w-full sm:w-48 bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20 tracking-[0.3em]"
+              inputMode="numeric"
+              maxLength={6}
+            />
+            <span className="text-xs text-white/50 self-center">
+              Sent to <strong>{otpEmail}</strong>
+            </span>
+          </div>
+        ) : null}
+        {status ? (
+          <p
+            className={`text-xs ${
+              status.type === "error" ? "text-rose-300" : "text-emerald-300"
+            }`}
+          >
+            {status.message}
+          </p>
+        ) : null}
+        {error ? <p className="text-xs text-rose-300">{error}</p> : null}
+        <div className="mt-2 space-y-2">
+          {loading ? (
+            <p className="text-sm text-white/60">Loading emails…</p>
+          ) : emails.length > 0 ? (
+            emails.map((email) => (
+              <div
+                key={email._id}
+                className="flex items-center justify-between rounded-xl border border-white/10 bg-neutral-900/70 px-3 py-2"
+              >
+                <div>
+                  <p className="text-sm font-medium">{email.email}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    void handleDeleteEmail(email._id);
+                  }}
+                  disabled={deletingId === email._id}
+                  className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-black/40 border border-white/10 px-2.5 py-1.5 text-xs hover:bg-black/60 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {deletingId === email._id ? "Removing…" : "Remove"}
+                </button>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-white/60">No emails added yet.</p>
+          )}
+        </div>
       </div>
       <p className="mt-1 text-xs text-white/60">
         We use your email domains to identify your organizations.

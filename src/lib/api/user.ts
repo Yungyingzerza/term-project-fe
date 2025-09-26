@@ -1,9 +1,18 @@
 import type {
   FollowUserPayload,
   SavedVideosResponse,
+  UpdateHandlePayload,
+  UpdateHandleResponse,
+  UpdateUsernamePayload,
+  UpdateUsernameResponse,
   UserHandleLookupResponse,
   UserProfileResponse,
   UserReactionsResponse,
+  SendEmailOtpPayload,
+  GenericMessageResponse,
+  CreateEmailPayload,
+  CreateEmailResponse,
+  GetEmailsResponse,
 } from "@/interfaces";
 
 interface RequestOptions {
@@ -109,6 +118,189 @@ export async function followUser(
   }
 
   return (await res.json()) as { message: string };
+}
+
+export async function updateHandle(
+  payload: UpdateHandlePayload,
+  { signal, cookie }: RequestOptions = {}
+): Promise<UpdateHandleResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/profile/handle", base);
+
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify(payload),
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to update handle: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as UpdateHandleResponse;
+}
+
+export async function updateUsername(
+  payload: UpdateUsernamePayload,
+  { signal, cookie }: RequestOptions = {}
+): Promise<UpdateUsernameResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/profile/username", base);
+
+  const res = await fetch(url.toString(), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify(payload),
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to update username: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as UpdateUsernameResponse;
+}
+
+export async function sendEmailOtp(
+  payload: SendEmailOtpPayload,
+  { signal, cookie }: RequestOptions = {}
+): Promise<GenericMessageResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/email/send-otp", base);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify(payload),
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to send email OTP: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as GenericMessageResponse;
+}
+
+export async function createEmail(
+  payload: CreateEmailPayload,
+  { signal, cookie }: RequestOptions = {}
+): Promise<CreateEmailResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/email", base);
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+    body: JSON.stringify(payload),
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to add email: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as CreateEmailResponse;
+}
+
+export async function getEmails(
+  { signal, cookie }: RequestOptions = {}
+): Promise<GetEmailsResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL("/user/email", base);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to load emails: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as GetEmailsResponse;
+}
+
+export async function deleteEmail(
+  emailId: string,
+  { signal, cookie }: RequestOptions = {}
+): Promise<GenericMessageResponse> {
+  const base = resolveBaseUrl();
+  const url = new URL(`/user/email/${encodeURIComponent(emailId)}`, base);
+
+  const res = await fetch(url.toString(), {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to remove email: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as GenericMessageResponse;
 }
 
 interface PaginationParams {
