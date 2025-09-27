@@ -1,5 +1,6 @@
 "use client";
 import { useCallback } from "react";
+import { buildApiUrlString } from "@/lib/api/utils";
 
 export interface JsonOptions extends RequestInit {
   /** If true, returns the raw Response instead of parsing JSON. */
@@ -14,9 +15,7 @@ function buildUrl(input: string): string {
     const u = new URL(input);
     return u.toString();
   } catch {
-    // Treat as relative to base
-    const url = new URL(input.startsWith("/") ? input : `/${input}`, base);
-    return url.toString();
+    return buildApiUrlString(input, base);
   }
 }
 

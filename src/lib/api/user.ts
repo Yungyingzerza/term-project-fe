@@ -16,27 +16,18 @@ import type {
   CreateEmailResponse,
   GetEmailsResponse,
 } from "@/interfaces";
+import { buildApiUrl } from "./utils";
 
 interface RequestOptions {
   signal?: AbortSignal;
   cookie?: string;
 }
 
-const baseApi = process.env.NEXT_PUBLIC_BASE_API as string;
-
-function resolveBaseUrl(): string {
-  if (!baseApi) {
-    throw new Error("NEXT_PUBLIC_BASE_API is not configured");
-  }
-  return baseApi;
-}
-
 export async function getUserIdByHandle(
   handle: string,
   { signal, cookie }: RequestOptions = {}
 ): Promise<UserHandleLookupResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL(`/user/handle/${encodeURIComponent(handle)}`, base);
+  const url = buildApiUrl(`user/handle/${encodeURIComponent(handle)}`);
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -65,8 +56,7 @@ export async function getUserProfile(
   userId: string,
   { signal, cookie }: RequestOptions = {}
 ): Promise<UserProfileResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL(`/user/profile/${encodeURIComponent(userId)}`, base);
+  const url = buildApiUrl(`user/profile/${encodeURIComponent(userId)}`);
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -95,8 +85,7 @@ export async function followUser(
   payload: FollowUserPayload,
   { signal, cookie }: RequestOptions = {}
 ): Promise<{ message: string }> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/follow", base);
+  const url = buildApiUrl("user/follow");
 
   const res = await fetch(url.toString(), {
     method: "POST",
@@ -126,8 +115,7 @@ export async function updateHandle(
   payload: UpdateHandlePayload,
   { signal, cookie }: RequestOptions = {}
 ): Promise<UpdateHandleResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/profile/handle", base);
+  const url = buildApiUrl("user/profile/handle");
 
   const res = await fetch(url.toString(), {
     method: "PATCH",
@@ -157,8 +145,7 @@ export async function updateUsername(
   payload: UpdateUsernamePayload,
   { signal, cookie }: RequestOptions = {}
 ): Promise<UpdateUsernameResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/profile/username", base);
+  const url = buildApiUrl("user/profile/username");
 
   const res = await fetch(url.toString(), {
     method: "PATCH",
@@ -188,8 +175,7 @@ export async function updateProfilePicture(
   payload: UpdateProfilePicturePayload,
   { signal, cookie }: RequestOptions = {}
 ): Promise<UpdateProfilePictureResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/profile/picture", base);
+  const url = buildApiUrl("user/profile/picture");
 
   const res = await fetch(url.toString(), {
     method: "PATCH",
@@ -219,8 +205,7 @@ export async function sendEmailOtp(
   payload: SendEmailOtpPayload,
   { signal, cookie }: RequestOptions = {}
 ): Promise<GenericMessageResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/email/send-otp", base);
+  const url = buildApiUrl("user/email/send-otp");
 
   const res = await fetch(url.toString(), {
     method: "POST",
@@ -250,8 +235,7 @@ export async function createEmail(
   payload: CreateEmailPayload,
   { signal, cookie }: RequestOptions = {}
 ): Promise<CreateEmailResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/email", base);
+  const url = buildApiUrl("user/email");
 
   const res = await fetch(url.toString(), {
     method: "POST",
@@ -280,8 +264,7 @@ export async function createEmail(
 export async function getEmails(
   { signal, cookie }: RequestOptions = {}
 ): Promise<GetEmailsResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/email", base);
+  const url = buildApiUrl("user/email");
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -310,8 +293,7 @@ export async function deleteEmail(
   emailId: string,
   { signal, cookie }: RequestOptions = {}
 ): Promise<GenericMessageResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL(`/user/email/${encodeURIComponent(emailId)}`, base);
+  const url = buildApiUrl(`user/email/${encodeURIComponent(emailId)}`);
 
   const res = await fetch(url.toString(), {
     method: "DELETE",
@@ -345,8 +327,7 @@ export async function getUserSavedVideos(
   params: PaginationParams = {},
   { signal, cookie }: RequestOptions = {}
 ): Promise<SavedVideosResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/saves/videos", base);
+  const url = buildApiUrl("user/saves/videos");
   if (params.limit) url.searchParams.set("limit", String(params.limit));
   if (params.cursor) url.searchParams.set("cursor", params.cursor);
 
@@ -377,8 +358,7 @@ export async function getUserReactions(
   params: PaginationParams = {},
   { signal, cookie }: RequestOptions = {}
 ): Promise<UserReactionsResponse> {
-  const base = resolveBaseUrl();
-  const url = new URL("/user/reactions/videos", base);
+  const url = buildApiUrl("user/reactions/videos");
   if (params.limit) url.searchParams.set("limit", String(params.limit));
   if (params.cursor) url.searchParams.set("cursor", params.cursor);
 

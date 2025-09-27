@@ -1,4 +1,5 @@
 import type { PostItem } from "@/interfaces";
+import { buildApiUrl } from "./utils";
 
 export type FeedAlgo = "for-you" | "following";
 
@@ -49,8 +50,7 @@ export interface GetUserFeedParams {
 }
 
 export async function getFeed({ algo = "for-you", limit = 10, cursor, signal, cookie }: GetFeedParams = {}): Promise<FeedResponse> {
-  const base = process.env.NEXT_PUBLIC_BASE_API as string;
-  const url = new URL("/feed", base);
+  const url = buildApiUrl("feed");
   url.searchParams.set("algo", algo);
   if (limit != null) url.searchParams.set("limit", String(limit));
   if (cursor) url.searchParams.set("cursor", cursor);
@@ -77,8 +77,7 @@ export async function getFeed({ algo = "for-you", limit = 10, cursor, signal, co
 }
 
 export async function getPostById({ postId, signal, cookie }: GetPostByIdParams): Promise<PostByIdResponse> {
-  const base = process.env.NEXT_PUBLIC_BASE_API as string;
-  const url = new URL(`/feed/${encodeURIComponent(postId)}`, base);
+  const url = buildApiUrl(`feed/${encodeURIComponent(postId)}`);
 
   const res = await fetch(url.toString(), {
     method: "GET",
@@ -105,8 +104,7 @@ export async function getPostById({ postId, signal, cookie }: GetPostByIdParams)
 }
 
 export async function getFeedByUserHandle({ handle, limit = 10, cursor, signal, cookie }: GetUserFeedParams): Promise<UserFeedResponse> {
-  const base = process.env.NEXT_PUBLIC_BASE_API as string;
-  const url = new URL(`/feed/user/handle/${encodeURIComponent(handle)}`, base);
+  const url = buildApiUrl(`feed/user/handle/${encodeURIComponent(handle)}`);
   if (limit != null) url.searchParams.set("limit", String(limit));
   if (cursor) url.searchParams.set("cursor", cursor);
 

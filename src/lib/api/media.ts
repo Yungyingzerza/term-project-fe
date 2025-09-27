@@ -4,6 +4,7 @@ import type {
   UploadVisibility,
   UploadVideoResponse,
 } from "@/interfaces";
+import { buildApiUrl } from "./utils";
 
 export interface UploadVideoParams {
   file: File;
@@ -26,12 +27,7 @@ export async function uploadVideo({
   signal,
   onUploadProgress,
 }: UploadVideoParams): Promise<UploadVideoResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_API;
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_BASE_API is not configured");
-  }
-
-  const url = new URL("/media/upload", baseUrl);
+  const url = buildApiUrl("media/upload");
   const formData = new FormData();
   formData.append("video", file);
   if (caption) formData.append("caption", caption);
@@ -59,12 +55,7 @@ export async function uploadProfileImage(
   file: File,
   { signal }: { signal?: AbortSignal } = {}
 ): Promise<UploadProfileImageResponse> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_API;
-  if (!baseUrl) {
-    throw new Error("NEXT_PUBLIC_BASE_API is not configured");
-  }
-
-  const url = new URL("/media/upload/profile", baseUrl);
+  const url = buildApiUrl("media/upload/profile");
   const formData = new FormData();
   formData.append("image", file);
 

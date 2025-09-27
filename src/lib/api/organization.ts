@@ -1,4 +1,5 @@
 import type { UserOrganizationsResponse } from "@/interfaces";
+import { buildApiUrl } from "./utils";
 
 export interface GetUserOrganizationsParams {
   signal?: AbortSignal;
@@ -10,8 +11,7 @@ export async function getUserOrganizations({
   signal,
   cookie,
 }: GetUserOrganizationsParams = {}): Promise<UserOrganizationsResponse> {
-  const base = process.env.NEXT_PUBLIC_BASE_API as string;
-  const url = new URL("/user/organizations", base);
+  const url = buildApiUrl("user/organizations");
 
   const res = await fetch(url.toString(), {
     method: "GET",
