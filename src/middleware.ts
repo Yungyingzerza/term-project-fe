@@ -26,6 +26,38 @@ const extractCookie = (cookies: string[], name: string): string | undefined => {
   return undefined;
 };
 
+const isProduction = process.env.NODE_ENV === "production";
+const authCookieBaseOptions = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  ...(isProduction ? { domain: ".yungying.com" } : {}),
+};
+
+const setAuthCookies = (
+  response: NextResponse,
+  accessToken: string,
+  refreshToken: string
+) => {
+  response.cookies.set("accessToken", accessToken, {
+    ...authCookieBaseOptions,
+    // expires in 5 minutes
+    maxAge: 5 * 60,
+  });
+  response.cookies.set("refreshToken", refreshToken, {
+    ...authCookieBaseOptions,
+    // expires in 7 days
+    maxAge: 7 * 24 * 60 * 60,
+  });
+};
+
+const deleteAuthCookie = (response: NextResponse, name: string) => {
+  if (isProduction) {
+    response.cookies.delete({ name, domain: ".yungying.com" });
+  } else {
+    response.cookies.delete(name);
+  }
+};
+
 export async function middleware(req: NextRequest) {
   let isAuth = false;
   const accessToken = req.cookies.get("accessToken")?.value;
@@ -45,8 +77,8 @@ export async function middleware(req: NextRequest) {
     // Continue with isAuth = false
     //delete invalid refresh token and access token
     const response = NextResponse.next();
-    response.cookies.delete("refreshToken");
-    response.cookies.delete("accessToken");
+    deleteAuthCookie(response, "refreshToken");
+    deleteAuthCookie(response, "accessToken");
     return response;
   } else if (refreshToken && !accessToken) {
     // try to get new access token calling API
@@ -70,28 +102,17 @@ export async function middleware(req: NextRequest) {
 
       if (!newAccessToken || !newRefreshToken) {
         const response = NextResponse.next();
-        response.cookies.delete("refreshToken");
+        deleteAuthCookie(response, "refreshToken");
         return response;
       }
 
       const response = NextResponse.next();
-      response.cookies.set("accessToken", newAccessToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        //expires in 5 minutes
-        maxAge: 5 * 60,
-      });
-      response.cookies.set("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        sameSite: "lax",
-        //expires in 7 days
-        maxAge: 7 * 24 * 60 * 60,
-      });
+      setAuthCookies(response, newAccessToken, newRefreshToken);
       return response;
     } else {
       //remove invalid refresh token
       const response = NextResponse.next();
-      response.cookies.delete("refreshToken");
+      deleteAuthCookie(response, "refreshToken");
       return response;
     }
   } else if (accessToken && refreshToken) {
@@ -127,23 +148,12 @@ export async function middleware(req: NextRequest) {
 
           if (!newAccessToken || !newRefreshToken) {
             const response = NextResponse.next();
-            response.cookies.delete("refreshToken");
+            deleteAuthCookie(response, "refreshToken");
             return response;
           }
 
           const response = NextResponse.next();
-          response.cookies.set("accessToken", newAccessToken, {
-            httpOnly: true,
-            sameSite: "lax",
-            //expires in 5 minutes
-            maxAge: 5 * 60,
-          });
-          response.cookies.set("refreshToken", newRefreshToken, {
-            httpOnly: true,
-            sameSite: "lax",
-            //expires in 7 days
-            maxAge: 7 * 24 * 60 * 60,
-          });
+          setAuthCookies(response, newAccessToken, newRefreshToken);
           return response;
         } else {
           isAuth = false;
@@ -156,8 +166,8 @@ export async function middleware(req: NextRequest) {
     isAuth = false;
     //cleanup cookies
     const response = NextResponse.next();
-    response.cookies.delete("refreshToken");
-    response.cookies.delete("accessToken");
+    deleteAuthCookie(response, "refreshToken");
+    deleteAuthCookie(response, "accessToken");
     return response;
   }
 
