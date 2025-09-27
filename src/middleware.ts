@@ -2,6 +2,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
+type HeadersWithGetSetCookie = Headers & {
+  getSetCookie?: () => string[];
+};
+
+const getSetCookieValues = (headers: Headers): string[] => {
+  const extended = headers as HeadersWithGetSetCookie;
+  if (typeof extended.getSetCookie === "function") {
+    const values = extended.getSetCookie();
+    if (Array.isArray(values) && values.length > 0) {
+      return values;
+    }
+  }
+  const single = headers.get("set-cookie");
+  return single ? [single] : [];
+};
+
+const extractCookie = (cookies: string[], name: string): string | undefined => {
+  for (const cookie of cookies) {
+    const match = cookie.match(new RegExp(`${name}=([^;]+)`));
+    if (match) return match[1];
+  }
+  return undefined;
+};
+
 export async function middleware(req: NextRequest) {
   let isAuth = false;
   const accessToken = req.cookies.get("accessToken")?.value;
@@ -39,26 +63,10 @@ export async function middleware(req: NextRequest) {
 
     if (res.ok) {
       isAuth = true;
-      const setCookieValues: string[] =
-        (typeof (res.headers as any).getSetCookie === "function"
-          ? (res.headers as any).getSetCookie()
-          : []) || [];
+      const setCookieValues = getSetCookieValues(res.headers);
 
-      if (setCookieValues.length === 0) {
-        const single = res.headers.get("set-cookie");
-        if (single) setCookieValues.push(single);
-      }
-
-      const extractCookie = (name: string): string | undefined => {
-        for (const sc of setCookieValues) {
-          const match = sc.match(new RegExp(`${name}=([^;]+)`));
-          if (match) return match[1];
-        }
-        return undefined;
-      };
-
-      const newAccessToken = extractCookie("accessToken");
-      const newRefreshToken = extractCookie("refreshToken");
+      const newAccessToken = extractCookie(setCookieValues, "accessToken");
+      const newRefreshToken = extractCookie(setCookieValues, "refreshToken");
 
       if (!newAccessToken || !newRefreshToken) {
         const response = NextResponse.next();
@@ -112,26 +120,10 @@ export async function middleware(req: NextRequest) {
 
         if (res.ok) {
           isAuth = true;
-          const setCookieValues: string[] =
-            (typeof (res.headers as any).getSetCookie === "function"
-              ? (res.headers as any).getSetCookie()
-              : []) || [];
+          const setCookieValues = getSetCookieValues(res.headers);
 
-          if (setCookieValues.length === 0) {
-            const single = res.headers.get("set-cookie");
-            if (single) setCookieValues.push(single);
-          }
-
-          const extractCookie = (name: string): string | undefined => {
-            for (const sc of setCookieValues) {
-              const match = sc.match(new RegExp(`${name}=([^;]+)`));
-              if (match) return match[1];
-            }
-            return undefined;
-          };
-
-          const newAccessToken = extractCookie("accessToken");
-          const newRefreshToken = extractCookie("refreshToken");
+          const newAccessToken = extractCookie(setCookieValues, "accessToken");
+          const newRefreshToken = extractCookie(setCookieValues, "refreshToken");
 
           if (!newAccessToken || !newRefreshToken) {
             const response = NextResponse.next();

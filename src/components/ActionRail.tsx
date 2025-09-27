@@ -99,7 +99,6 @@ export default function ActionRail({
     "like"
   );
   const displayedKey: ReactionKey = reaction || topKey;
-  const displayed = REACTIONS.find((r) => r.key === displayedKey)!;
   useEffect(() => setCounts(interactions), [interactions]);
   useEffect(() => setReaction(viewerReaction ?? null), [viewerReaction]);
   useEffect(() => setSaved(!!viewerSaved), [viewerSaved]);
@@ -141,12 +140,6 @@ export default function ActionRail({
   };
 
   const busyRef = useRef<boolean>(false);
-
-  type ReactionResponse = {
-    postId: string;
-    interactions: Interactions;
-    viewer?: { reaction?: ReactionKey | null };
-  };
 
   const handleMainClick = () => {
     if (suppressClickRef.current) {
@@ -319,7 +312,7 @@ export default function ActionRail({
               PICKER_CLOSE_DELAY_MS
             );
           }}
-          onTouchStart={(e) => {
+          onTouchStart={() => {
             // Record where the gesture started; used to avoid suppressing future taps
             // when the user drags into the picker.
             touchStartedOnMainRef.current = true;

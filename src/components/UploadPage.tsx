@@ -2,7 +2,8 @@
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
-import { useSelector } from "react-redux";
+import Image from "next/image";
+import { useAppSelector } from "@/store/hooks";
 import { useUserOrganizations } from "@/hooks/useUserOrganizations";
 import { uploadVideo } from "@/lib/api/media";
 import type { UploadVisibility } from "@/interfaces";
@@ -11,7 +12,7 @@ import {
   Upload,
   Video,
   Hash,
-  Image,
+  Image as ImageIcon,
   X,
   Check,
   Users,
@@ -27,7 +28,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 type Visibility = UploadVisibility;
 
 export default function UploadPage() {
-  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
+  const ambientColor = useAppSelector((s) => s.player.ambientColor);
 
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
@@ -210,7 +211,7 @@ export default function UploadPage() {
                           className="cursor-not-allowed px-3 py-2 rounded-xl bg-white/10 border border-white/10 text-white/70 inline-flex items-center gap-1.5"
                           title="Images not supported yet"
                         >
-                          <Image className="w-4 h-4" /> Image (soon)
+                          <ImageIcon className="w-4 h-4" /> Image (soon)
                         </button>
                       </div>
                       <input
@@ -264,10 +265,13 @@ export default function UploadPage() {
                               }`}
                             >
                               {o.logo_url ? (
-                                <img
+                                <Image
                                   src={o.logo_url}
                                   alt={o.name}
+                                  width={16}
+                                  height={16}
                                   className="w-4 h-4 rounded object-cover"
+                                  unoptimized
                                 />
                               ) : (
                                 <div className="w-4 h-4 rounded bg-white/10 border border-white/10 grid place-items-center text-[10px] font-semibold">

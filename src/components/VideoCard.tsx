@@ -2,11 +2,19 @@
 import { MoreVertical, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import Image from "next/image";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleMuted, setAmbientColor, setVolume } from "@/store/playerSlice";
 import ActionRail from "./ActionRail";
 import MusicTicker from "./MusicTicker";
 import type { VideoCardProps } from "@/interfaces";
+
+type VideoWithCapture = HTMLVideoElement & {
+  captureStream?: () => MediaStream;
+  mozCaptureStream?: () => MediaStream;
+};
+
+const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
 export default function VideoCard({
   post,
@@ -14,10 +22,10 @@ export default function VideoCard({
   shouldPreload = false,
   preloadSeconds = 5,
 }: VideoCardProps) {
-  const dispatch = useDispatch();
-  const globalMuted = useSelector((s: any) => !!s.player.muted) as boolean;
-  const muted = (globalMuted && isActive) as boolean;
-  const volume = (useSelector((s: any) => s.player.volume) ?? 0.7) as number;
+  const dispatch = useAppDispatch();
+  const globalMuted = useAppSelector((s) => !!s.player.muted);
+  const volume = useAppSelector((s) => s.player.volume) ?? 0.7;
+  const muted = globalMuted && isActive;
   const [playing, setPlaying] = useState<boolean>(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const bgVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -26,7 +34,6 @@ export default function VideoCard({
   const lastSentColorRef = useRef<string | null>(null);
   const [usePosterBg, setUsePosterBg] = useState<boolean>(false);
   const [videoReady, setVideoReady] = useState<boolean>(false);
-  const [bgReady, setBgReady] = useState<boolean>(false);
   // Only load the active card's video, but allow light preload for next card
   const shouldLoad = isActive || shouldPreload;
   const preloadDoneRef = useRef<boolean>(false);
@@ -39,7 +46,6 @@ export default function VideoCard({
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [hoverRatio, setHoverRatio] = useState<number | null>(null);
   const [previewTime, setPreviewTime] = useState<number | null>(null);
-  const [previewVisible, setPreviewVisible] = useState<boolean>(false);
   const [previewSize, setPreviewSize] = useState<{ w: number; h: number }>({
     w: 140,
     h: 248,
@@ -157,7 +163,6 @@ export default function VideoCard({
   useEffect(() => {
     preloadDoneRef.current = false;
     setVideoReady(false);
-    setBgReady(false);
     setUsePosterBg(true);
   }, [post.videoSrc]);
 
@@ -235,57 +240,52 @@ export default function VideoCard({
     const v = videoRef.current;
     if (!v) return;
 
-    const bg = bgVideoRef.current as HTMLVideoElement | null;
+    const bg = bgVideoRef.current;
 
     // If we are not loading or not active, prefer poster and clear any linked stream
     if (!shouldLoad || !isActive) {
       setUsePosterBg(true);
-      setBgReady(false);
       try {
-        if (bg && (bg as any).srcObject) (bg as any).srcObject = null;
+        if (bg && bg.srcObject) bg.srcObject = null;
       } catch {}
       return;
     }
 
     // Feature detection: captureStream is not supported on many mobile browsers
+    const captureCandidate = v as VideoWithCapture;
     const supportsCapture =
-      typeof (v as any).captureStream === "function" ||
-      typeof (v as any).mozCaptureStream === "function";
+      typeof captureCandidate.captureStream === "function" ||
+      typeof captureCandidate.mozCaptureStream === "function";
     if (!supportsCapture) {
       setUsePosterBg(true);
-      setBgReady(false);
       return;
     }
 
     let cancelled = false;
-    const onBgCanShow = () => {
+    const onBgCanShow = (event?: Event) => {
+      void event;
       if (cancelled) return;
-      setBgReady(true);
       setUsePosterBg(false);
     };
 
     const link = () => {
       if (cancelled) return;
-      const bgEl = bgVideoRef.current as any;
-      if (!bgEl) return;
+      if (!bg) return;
       try {
         const stream: MediaStream | undefined =
-          (v as any).captureStream?.() || (v as any).mozCaptureStream?.();
+          captureCandidate.captureStream?.() ||
+          captureCandidate.mozCaptureStream?.();
         if (stream) {
           try {
-            bgEl.srcObject = stream;
+            bg.srcObject = stream;
             // Wait until background video is actually able to render frames
             // before hiding the poster blur, to avoid a flash of black.
-            const bgVideo = bgVideoRef.current;
-            if (bgVideo) {
-              // If already has current data, reveal immediately
-              if (bgVideo.readyState >= 2) {
-                onBgCanShow();
-              } else {
-                bgVideo.addEventListener("loadeddata", onBgCanShow);
-                bgVideo.addEventListener("canplay", onBgCanShow);
-                bgVideo.addEventListener("playing", onBgCanShow);
-              }
+            if (bg.readyState >= 2) {
+              onBgCanShow();
+            } else {
+              bg.addEventListener("loadeddata", onBgCanShow as EventListener);
+              bg.addEventListener("canplay", onBgCanShow as EventListener);
+              bg.addEventListener("playing", onBgCanShow as EventListener);
             }
           } catch {
             setUsePosterBg(true);
@@ -304,14 +304,13 @@ export default function VideoCard({
     return () => {
       cancelled = true;
       v.removeEventListener("loadedmetadata", link as EventListener);
-      const b = bgVideoRef.current as any;
-      if (b) {
+      if (bg) {
         try {
-          b.srcObject = null;
+          bg.srcObject = null;
         } catch {}
-        b.removeEventListener("loadeddata", onBgCanShow as EventListener);
-        b.removeEventListener("canplay", onBgCanShow as EventListener);
-        b.removeEventListener("playing", onBgCanShow as EventListener);
+        bg.removeEventListener("loadeddata", onBgCanShow as EventListener);
+        bg.removeEventListener("canplay", onBgCanShow as EventListener);
+        bg.removeEventListener("playing", onBgCanShow as EventListener);
       }
     };
   }, [post.videoSrc, shouldLoad, isActive]);
@@ -324,7 +323,7 @@ export default function VideoCard({
     let rafId: number | null = null;
     const syncBgTime = () => {
       const b = bgVideoRef.current;
-      if (!b || (b as any).srcObject || !v || !isFinite(v.currentTime)) return;
+      if (!b || b.srcObject || !v || !isFinite(v.currentTime)) return;
       try {
         if (Math.abs((b.currentTime || 0) - v.currentTime) > 0.2) {
           b.currentTime = v.currentTime;
@@ -380,15 +379,15 @@ export default function VideoCard({
     };
     update();
     v.addEventListener("loadedmetadata", update);
-    v.addEventListener("resize", update as any);
+    v.addEventListener("resize", update as EventListener);
     return () => {
       v.removeEventListener("loadedmetadata", update);
-      v.removeEventListener("resize", update as any);
+      v.removeEventListener("resize", update as EventListener);
     };
   }, [post.videoSrc]);
 
   // Lazy-init preview video element to avoid extra network until needed
-  const ensurePreviewVideo = () => {
+  const ensurePreviewVideo = useCallback(() => {
     if (previewVideoRef.current) return previewVideoRef.current;
     const v = document.createElement("video");
     v.crossOrigin = "use-credentials";
@@ -398,144 +397,150 @@ export default function VideoCard({
     v.src = post.videoSrc;
     previewVideoRef.current = v;
     return v;
-  };
+  }, [post.videoSrc]);
 
-  const drawPreview = (time: number) => {
-    const now = Date.now();
-    // Throttle seeks to ~30fps while dragging
-    if (now - lastPreviewRequestRef.current < 30) {
-      pendingSeekRef.current = time;
-      return;
-    }
-    lastPreviewRequestRef.current = now;
-
-    const pv = ensurePreviewVideo();
-    const canvas = previewCanvasRef.current;
-    if (!pv || !canvas) return;
-
-    const doDraw = () => {
-      try {
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        const { w, h } = previewSize;
-        ctx.clearRect(0, 0, w, h);
-        const vw = pv.videoWidth || 9;
-        const vh = pv.videoHeight || 16;
-        // Contain into preview box
-        const scale = Math.min(w / vw, h / vh);
-        const dw = vw * scale;
-        const dh = vh * scale;
-        const dx = (w - dw) / 2;
-        const dy = (h - dh) / 2;
-        ctx.drawImage(pv, dx, dy, dw, dh);
-      } catch {
-        // Drawing cross-origin videos may taint canvas; we don't read pixels, so ignore errors
+  const drawPreview = useCallback(
+    (time: number) => {
+      const now = Date.now();
+      // Throttle seeks to ~30fps while dragging
+      if (now - lastPreviewRequestRef.current < 30) {
+        pendingSeekRef.current = time;
+        return;
       }
-    };
+      lastPreviewRequestRef.current = now;
 
-    const onSeeked = () => {
-      pv.removeEventListener("seeked", onSeeked);
-      doDraw();
-      // If another seek was queued while we waited, process it now
-      if (pendingSeekRef.current != null) {
-        const t = pendingSeekRef.current;
-        pendingSeekRef.current = null;
-        drawPreview(t!);
-      }
-    };
+      const pv = ensurePreviewVideo();
+      const canvas = previewCanvasRef.current;
+      if (!pv || !canvas) return;
 
-    // If metadata not ready, wait for it first
-    if (pv.readyState < 1) {
-      const onMeta = () => {
-        pv.removeEventListener("loadedmetadata", onMeta);
-        pv.currentTime = Math.max(
-          0,
-          Math.min(time, (pv.duration || 0) - 0.001)
-        );
+      const doDraw = () => {
+        try {
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          const { w, h } = previewSize;
+          ctx.clearRect(0, 0, w, h);
+          const vw = pv.videoWidth || 9;
+          const vh = pv.videoHeight || 16;
+          // Contain into preview box
+          const scale = Math.min(w / vw, h / vh);
+          const dw = vw * scale;
+          const dh = vh * scale;
+          const dx = (w - dw) / 2;
+          const dy = (h - dh) / 2;
+          ctx.drawImage(pv, dx, dy, dw, dh);
+        } catch {
+          // Drawing cross-origin videos may taint canvas; we don't read pixels, so ignore errors
+        }
       };
-      pv.addEventListener("loadedmetadata", onMeta);
-      pv.load();
-    }
 
-    pv.addEventListener("seeked", onSeeked);
-    try {
-      pv.currentTime = Math.max(0, Math.min(time, (pv.duration || 0) - 0.001));
-    } catch {
-      pv.removeEventListener("seeked", onSeeked);
-    }
-  };
+      const onSeeked = () => {
+        pv.removeEventListener("seeked", onSeeked);
+        doDraw();
+        // If another seek was queued while we waited, process it now
+        if (pendingSeekRef.current != null) {
+          const t = pendingSeekRef.current;
+          pendingSeekRef.current = null;
+          drawPreview(t!);
+        }
+      };
 
-  const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
-  const clientXToRatio = (clientX: number) => {
+      // If metadata not ready, wait for it first
+      if (pv.readyState < 1) {
+        const onMeta = () => {
+          pv.removeEventListener("loadedmetadata", onMeta);
+          pv.currentTime = Math.max(
+            0,
+            Math.min(time, (pv.duration || 0) - 0.001)
+          );
+        };
+        pv.addEventListener("loadedmetadata", onMeta);
+        pv.load();
+      }
+
+      pv.addEventListener("seeked", onSeeked);
+      try {
+        pv.currentTime = Math.max(0, Math.min(time, (pv.duration || 0) - 0.001));
+      } catch {
+        pv.removeEventListener("seeked", onSeeked);
+      }
+    },
+    [ensurePreviewVideo, previewSize]
+  );
+
+  const clientXToRatio = useCallback((clientX: number) => {
     const bar = progressBarRef.current;
     if (!bar) return 0;
     const rect = bar.getBoundingClientRect();
     return clamp01((clientX - rect.left) / Math.max(1, rect.width));
-  };
+  }, []);
 
-  const beginScrub = (ratio: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    playingBeforeScrubRef.current = playing;
-    setIsScrubbing(true);
-    setPreviewVisible(true);
-    setPlaying(false);
-    const dur = isFinite(v.duration) ? v.duration : 0;
-    const t = dur * ratio;
-    setPreviewTime(t);
-    setHoverRatio(ratio);
-    drawPreview(t);
-  };
+  const beginScrub = useCallback(
+    (ratio: number) => {
+      const v = videoRef.current;
+      if (!v) return;
+      playingBeforeScrubRef.current = playing;
+      setIsScrubbing(true);
+      setPlaying(false);
+      const dur = isFinite(v.duration) ? v.duration : 0;
+      const t = dur * ratio;
+      setPreviewTime(t);
+      setHoverRatio(ratio);
+      drawPreview(t);
+    },
+    [drawPreview, playing]
+  );
 
-  const updateScrub = (ratio: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    const dur = isFinite(v.duration) ? v.duration : 0;
-    const t = dur * ratio;
-    setPreviewTime(t);
-    setHoverRatio(ratio);
-    drawPreview(t);
-  };
+  const updateScrub = useCallback(
+    (ratio: number) => {
+      const v = videoRef.current;
+      if (!v) return;
+      const dur = isFinite(v.duration) ? v.duration : 0;
+      const t = dur * ratio;
+      setPreviewTime(t);
+      setHoverRatio(ratio);
+      drawPreview(t);
+    },
+    [drawPreview]
+  );
 
-  const endScrub = (ratio?: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    const r = ratio != null ? ratio : hoverRatio ?? lastProgressRef.current;
-    const dur = isFinite(v.duration) ? v.duration : 0;
-    const t = dur * clamp01(r ?? 0);
-    try {
-      if (isFinite(t) && t >= 0) v.currentTime = t;
-    } catch {}
-    setIsScrubbing(false);
-    setPreviewVisible(false);
-    setHoverRatio(null);
-    setPreviewTime(null);
-    if (playingBeforeScrubRef.current) setPlaying(true);
-  };
+  const endScrub = useCallback(
+    (ratio?: number) => {
+      const v = videoRef.current;
+      if (!v) return;
+      const r = ratio != null ? ratio : hoverRatio ?? lastProgressRef.current;
+      const dur = isFinite(v.duration) ? v.duration : 0;
+      const t = dur * clamp01(r ?? 0);
+      try {
+        if (isFinite(t) && t >= 0) v.currentTime = t;
+      } catch {}
+      setIsScrubbing(false);
+      setHoverRatio(null);
+      setPreviewTime(null);
+      if (playingBeforeScrubRef.current) setPlaying(true);
+    },
+    [hoverRatio]
+  );
 
   // Attach pointer listeners during active scrubbing for outside moves
   useEffect(() => {
+    if (!isScrubbing) return;
     const onMove = (e: PointerEvent) => {
-      if (!isScrubbing) return;
       const ratio = clientXToRatio(e.clientX);
       updateScrub(ratio);
     };
     const onUp = (e: PointerEvent) => {
-      if (!isScrubbing) return;
       const ratio = clientXToRatio(e.clientX);
       endScrub(ratio);
     };
-    if (isScrubbing) {
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
-      window.addEventListener("pointercancel", onUp);
-    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [isScrubbing]);
+  }, [isScrubbing, clientXToRatio, updateScrub, endScrub]);
 
   useEffect(() => {
     if (!isAdjustingVolume) return;
@@ -608,7 +613,7 @@ export default function VideoCard({
     // Fully unload when not active and not marked for preload
     if (!isActive && !shouldPreload) {
       const v = videoRef.current;
-      const bg = bgVideoRef.current as any;
+      const bg = bgVideoRef.current;
       try {
         if (v) {
           v.pause();
@@ -796,10 +801,14 @@ export default function VideoCard({
       />
       {/* Crisp poster overlay for main video until it’s ready */}
       {!videoReady && (
-        <img
+        <Image
           aria-hidden
           className="absolute inset-0 z-20 w-full h-full object-contain pointer-events-none"
           src={post.thumbnail}
+          alt="Video placeholder"
+          fill
+          sizes="100vw"
+          unoptimized
         />
       )}
       <video
@@ -821,9 +830,13 @@ export default function VideoCard({
 
       <div className="absolute left-2 sm:left-4 bottom-20 sm:bottom-24 space-y-2 max-w-[80%] z-30">
         <div className="flex items-center gap-2">
-          <img
+          <Image
             src={post.user.avatar}
+            alt={`${post.user.name} avatar`}
+            width={32}
+            height={32}
             className="w-8 h-8 rounded-full border border-white/10"
+            unoptimized
           />
           <div>
             <p className="font-semibold leading-tight">{post.user.name}</p>
@@ -955,7 +968,7 @@ export default function VideoCard({
         className="absolute left-0 right-0 bottom-0 h-6 z-30 overflow-visible cursor-pointer touch-none"
         onPointerDown={(e) => {
           // Only left button or touch
-          if ((e as any).button != null && (e as any).button !== 0) return;
+          if (typeof e.button === "number" && e.button !== 0) return;
           (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
           const ratio = clientXToRatio(e.clientX);
           beginScrub(ratio);
@@ -972,7 +985,6 @@ export default function VideoCard({
           drawPreview(t);
         }}
         onPointerLeave={() => {
-          if (!isScrubbing) setPreviewVisible(false);
           setHoverRatio(null);
         }}
         onPointerUp={(e) => {

@@ -1,6 +1,7 @@
 "use client";
 import { Search, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { setAmbientColor } from "@/store/playerSlice";
 import { useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -79,10 +80,13 @@ export default function TopBar() {
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((o) => !o)}
                 >
-                  <img
+                  <Image
                     src={user?.picture_url || "https://i.pravatar.cc/80?img=5"}
                     className="w-8 h-8 rounded-full"
                     alt="Profile menu"
+                    width={32}
+                    height={32}
+                    unoptimized
                   />
                 </button>
 

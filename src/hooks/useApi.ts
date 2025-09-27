@@ -27,7 +27,7 @@ function buildUrl(input: string): string {
  * - on 401 Unauthorized, calls `/line/refresh` then retries once
  */
 export function useApi() {
-  const json = useCallback(async <T = any>(input: string, init: JsonOptions = {}): Promise<T> => {
+  const json = useCallback(async <T = unknown>(input: string, init: JsonOptions = {}): Promise<T> => {
     const { raw, headers, credentials, ...rest } = init;
     const url = buildUrl(input);
     const doFetch = async (): Promise<Response> =>
@@ -63,8 +63,9 @@ export function useApi() {
       const text = await res.text().catch(() => "");
       throw new Error(`${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`);
     }
-    if (raw) return (res as unknown) as T;
-    return (await res.json()) as T;
+    if (raw) return res as unknown as T;
+    const data: unknown = await res.json();
+    return data as T;
   }, []);
 
   // Keep useApi generic; feature-specific hooks should build on top of this.

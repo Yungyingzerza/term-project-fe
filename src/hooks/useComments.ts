@@ -48,8 +48,10 @@ export function useComments({ postId, limit = 12, enabled = true }: UseCommentsO
         setHasMore(!!data?.paging?.hasMore);
         setNextCursor(data?.paging?.nextCursor ?? null);
         setItems((prev) => (mode === "reset" ? data.items ?? [] : [...prev, ...(data.items ?? [])]));
-      } catch (e: any) {
-        setError(e instanceof Error ? e : new Error(String(e)));
+      } catch (err: unknown) {
+        const normalizedError =
+          err instanceof Error ? err : new Error(String(err));
+        setError(normalizedError);
       } finally {
         setLoading(false);
         inFlight.current = false;

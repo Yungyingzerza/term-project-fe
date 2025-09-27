@@ -21,6 +21,12 @@ const PRELOAD_BEHIND = 0; // e.g., 1 also preloads the previous video
 // How many seconds to warm buffer for each preloaded video (approximate)
 const PRELOAD_SECONDS = 3;
 
+type WindowWithCSS = Window & {
+  CSS?: {
+    supports?: (query: string) => boolean;
+  };
+};
+
 // Data is now provided by useFeed hook; sample posts removed.
 
 export default function Feed({
@@ -133,7 +139,8 @@ export default function Feed({
     const computeAppVh = () => {
       if (typeof window === "undefined") return "100vh";
       try {
-        if ((window as any).CSS?.supports?.("height: 100dvh")) {
+        const win = window as WindowWithCSS;
+        if (win.CSS?.supports?.("height: 100dvh")) {
           return "100dvh";
         }
       } catch {}
@@ -215,11 +222,6 @@ export default function Feed({
   }, []);
 
   // Bottom tabs height is provided globally by BottomTabs via --bottom-tabs-h
-
-  const getThreshold = () => {
-    const h = containerRef.current?.getBoundingClientRect().height || 600;
-    return Math.max(80, Math.min(240, Math.round(h * 0.25)));
-  };
 
   // Native scroll: set dragging on scroll, clear shortly after it settles
   useEffect(() => {

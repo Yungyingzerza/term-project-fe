@@ -2,7 +2,8 @@
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
-import { useDispatch, useSelector } from "react-redux";
+import Image from "next/image";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   Check,
   LogOut,
@@ -34,15 +35,9 @@ import { uploadProfileImage } from "@/lib/api/media";
 import type { UserEmail } from "@/interfaces/user";
 
 export default function SettingsPage() {
-  const dispatch = useDispatch();
-  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
-  const user = useSelector((s: any) => s.user) as {
-    id?: string;
-    username: string;
-    handle?: string;
-    picture_url: string;
-    emails?: string[];
-  };
+  const dispatch = useAppDispatch();
+  const ambientColor = useAppSelector((s) => s.player.ambientColor);
+  const user = useAppSelector((s) => s.user);
 
   const [username, setUsernameLocal] = useState(user?.username || "");
   const [handle, setHandleLocal] = useState(user?.handle || "");
@@ -242,14 +237,17 @@ export default function SettingsPage() {
                 <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden border border-white/10 bg-neutral-800 shrink-0">
-                      <img
+                      <Image
                         src={
                           avatarDataUrl ||
                           user?.picture_url ||
                           "https://i.pravatar.cc/100?img=1"
                         }
                         alt="Avatar preview"
+                        width={48}
+                        height={48}
                         className="w-full h-full object-cover"
+                        unoptimized
                       />
                     </div>
                     <div className="flex-1 min-w-0">

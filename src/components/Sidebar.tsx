@@ -8,6 +8,7 @@ import {
   User,
   MessageCircle,
 } from "lucide-react";
+import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setAmbientColor } from "@/store/playerSlice";
 import { usePathname, useRouter } from "next/navigation";
@@ -102,10 +103,13 @@ export default function Sidebar() {
                   className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
                 >
                   {org.logo_url ? (
-                    <img
+                    <Image
                       src={org.logo_url}
                       alt={`${org.name} logo`}
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded object-cover"
+                      unoptimized
                     />
                   ) : (
                     <div className="w-8 h-8 rounded bg-white/10 border border-white/10 grid place-items-center text-sm font-semibold">

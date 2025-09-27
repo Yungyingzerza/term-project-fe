@@ -1,10 +1,11 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
-import { useSelector } from "react-redux";
+import { useAppSelector } from "@/store/hooks";
 import type { PostItem } from "@/interfaces/post";
 import type {
   SavedVideosResponse,
@@ -48,12 +49,8 @@ export default function ProfilePage({
   reacted,
   saved,
 }: ProfilePageProps) {
-  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
-  const user = useSelector((s: any) => s.user) as {
-    id?: string;
-    username: string;
-    picture_url: string;
-  };
+  const ambientColor = useAppSelector((s) => s.player.ambientColor);
+  const user = useAppSelector((s) => s.user);
   const profileUser = profile?.user;
   const displayName =
     profileUser?.username || author?.name || user?.username || "Creator";
@@ -178,11 +175,14 @@ export default function ProfilePage({
               className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 focus:outline-none focus:ring-2 focus:ring-white/20"
               aria-label={`Open video ${p.id} with ${formatCount(p.views)} views`}
             >
-              <img
+              <Image
                 src={p.thumbnail}
-                alt="thumbnail"
+                alt={`${displayName} video thumbnail`}
+                width={400}
+                height={533}
                 className="w-full aspect-[9/12] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 loading="lazy"
+                unoptimized
               />
               <div className="absolute top-2 right-2 z-10 px-2 py-1 rounded-md bg-black/60 border border-white/10 text-[11px] flex items-center gap-1">
                 <Eye className="w-3.5 h-3.5" />
@@ -279,10 +279,13 @@ export default function ProfilePage({
             {/* Header card - simplified to match ModernTok */}
             <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5 sm:p-6">
               <div className="flex items-start gap-4">
-                <img
+                <Image
                   src={avatar}
                   alt={`${displayName} avatar`}
+                  width={96}
+                  height={96}
                   className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/10 object-cover"
+                  unoptimized
                 />
                 <div className="flex-1 min-w-0">
                   <h1 className="text-xl sm:text-2xl font-extrabold leading-tight truncate">
@@ -409,10 +412,13 @@ function MiniHorizontalCard({ title, thumb, meta, href }: MiniHorizontalCardProp
       prefetch={false}
       className="flex items-center gap-3 rounded-xl border border-white/10 bg-neutral-900/70 p-3 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
     >
-      <img
+      <Image
         src={thumb || "https://via.placeholder.com/80x120?text=No+Image"}
         alt={title}
+        width={80}
+        height={120}
         className="h-20 w-16 rounded-lg object-cover"
+        unoptimized
       />
       <div className="min-w-0">
         <p className="text-sm font-semibold line-clamp-2">{title}</p>

@@ -80,7 +80,7 @@ export default function BottomTabs() {
 
   return (
     <nav
-      ref={navRef as any}
+      ref={navRef}
       data-bottom-tabs
       className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-white/10 bg-neutral-950/80 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]"
     >

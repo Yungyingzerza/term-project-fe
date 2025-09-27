@@ -1,7 +1,8 @@
 "use client";
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import type { CommentItem, CommentVisibility } from "@/interfaces";
 import { useComments } from "@/hooks/useComments";
 import { useAppSelector } from "@/store/hooks";
@@ -131,7 +132,14 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
         <div ref={scrollerRef} className="px-3 py-2 h-[55vh] sm:h-[calc(100%-98px)] overflow-y-auto space-y-3">
           {items.map((c) => (
             <div key={c.id} className="flex items-start gap-2">
-              <img src={c.user.avatar} className="w-8 h-8 rounded-full border border-white/10" />
+              <Image
+                src={c.user.avatar}
+                alt={`${c.user.handle}'s avatar`}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full border border-white/10"
+                unoptimized
+              />
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-sm">
                   <span className="font-semibold truncate max-w-[10rem] text-white">{c.user.handle}</span>

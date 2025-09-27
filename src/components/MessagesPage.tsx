@@ -2,7 +2,8 @@
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
-import { useSelector } from "react-redux";
+import Image from "next/image";
+import { useAppSelector } from "@/store/hooks";
 import {
   MessageCircle,
   Search,
@@ -40,11 +41,8 @@ function nowTime() {
 }
 
 export default function MessagesPage() {
-  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
-  const user = useSelector((s: any) => s.user) as {
-    username?: string;
-    picture_url?: string;
-  };
+  const ambientColor = useAppSelector((s) => s.player.ambientColor);
+  const user = useAppSelector((s) => s.user);
 
   const DEFAULT_ME = useMemo(
     () => ({
@@ -120,13 +118,14 @@ export default function MessagesPage() {
   const listRef = useRef<HTMLDivElement | null>(null);
   const [draft, setDraft] = useState("");
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
+  const activeMessagesLength = messagesByConvo[activeId]?.length ?? 0;
 
   useEffect(() => {
     // Scroll to bottom when active convo changes or messages update
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [activeId, messagesByConvo[activeId]?.length]);
+  }, [activeId, activeMessagesLength]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -222,10 +221,13 @@ export default function MessagesPage() {
                         }`}
                         aria-current={active || undefined}
                       >
-                        <img
+                        <Image
                           src={c.avatar}
-                          alt="avatar"
+                          alt={`${c.name}'s avatar`}
+                          width={36}
+                          height={36}
                           className="w-9 h-9 rounded-full border border-white/10 object-cover"
+                          unoptimized
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between">
@@ -270,10 +272,13 @@ export default function MessagesPage() {
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
-                  <img
-                    src={active?.avatar}
-                    alt="avatar"
+                  <Image
+                    src={active?.avatar || "https://i.pravatar.cc/100?img=1"}
+                    alt={`${active?.name || "Contact"} avatar`}
+                    width={36}
+                    height={36}
                     className="w-9 h-9 rounded-full border border-white/10 object-cover"
+                    unoptimized
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{active?.name}</p>
@@ -370,10 +375,13 @@ function MessageBubble({
   return (
     <div className={`flex items-end gap-2 ${isMe ? "justify-end" : ""}`}>
       {!isMe && (
-        <img
-          src={themAvatar}
-          alt="avatar"
+        <Image
+          src={themAvatar || "https://i.pravatar.cc/100?img=3"}
+          alt="Conversation avatar"
+          width={28}
+          height={28}
           className="w-7 h-7 rounded-full border border-white/10 object-cover"
+          unoptimized
         />
       )}
       <div className={`max-w-[70%] ${isMe ? "text-right" : "text-left"}`}>
@@ -398,10 +406,13 @@ function MessageBubble({
         </div>
       </div>
       {isMe && (
-        <img
-          src={meAvatar}
-          alt="me"
+        <Image
+          src={meAvatar || "https://i.pravatar.cc/100?img=2"}
+          alt="Your avatar"
+          width={28}
+          height={28}
           className="w-7 h-7 rounded-full border border-white/10 object-cover"
+          unoptimized
         />
       )}
     </div>

@@ -2,7 +2,8 @@
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
-import { useSelector } from "react-redux";
+import Image from "next/image";
+import { useAppSelector } from "@/store/hooks";
 import { Flame, Hash, Play, Sparkles } from "lucide-react";
 
 type ExploreItem = {
@@ -83,7 +84,7 @@ const EXPLORE_ITEMS: ExploreItem[] = [
 ];
 
 export default function ExplorePage() {
-  const ambientColor = useSelector((s: any) => s.player.ambientColor) as string;
+  const ambientColor = useAppSelector((s) => s.player.ambientColor);
 
   const formatCount = (n: number): string => {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -147,11 +148,14 @@ export default function ExplorePage() {
                     item.views
                   )} views`}
                 >
-                  <img
+                  <Image
                     src={item.thumbnail}
                     alt={item.title}
+                    width={400}
+                    height={533}
                     className="w-full aspect-[9/12] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     loading="lazy"
+                    unoptimized
                   />
 
                   {/* Tag chip */}

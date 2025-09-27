@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setExp, setId, setPictureUrl, setUsername } from "@/store/userSlice";
 
 /**
@@ -17,8 +17,8 @@ export default function useTokenRefresh(options?: {
   const bufferSeconds = options?.bufferSeconds ?? 60;
   const minDelaySeconds = options?.minDelaySeconds ?? 5;
 
-  const dispatch = useDispatch();
-  const exp = useSelector((s: any) => (s?.user?.exp as number) || 0);
+  const dispatch = useAppDispatch();
+  const exp = useAppSelector((s) => s.user.exp ?? 0);
 
   const timerRef = useRef<number | null>(null);
 
@@ -107,4 +107,3 @@ export default function useTokenRefresh(options?: {
     return () => clearTimer();
   }, [exp, bufferSeconds, minDelaySeconds, schedule]);
 }
-
