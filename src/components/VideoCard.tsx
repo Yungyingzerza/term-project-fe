@@ -3,11 +3,13 @@ import { MoreVertical, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleMuted, setAmbientColor, setVolume } from "@/store/playerSlice";
 import ActionRail from "./ActionRail";
 import MusicTicker from "./MusicTicker";
 import type { VideoCardProps } from "@/interfaces";
+import { followUser, getUserIdByHandle, getUserProfile } from "@/lib/api/user";
 
 type VideoWithCapture = HTMLVideoElement & {
   captureStream?: () => MediaStream;
@@ -25,6 +27,8 @@ export default function VideoCard({
   const dispatch = useAppDispatch();
   const globalMuted = useAppSelector((s) => !!s.player.muted);
   const volume = useAppSelector((s) => s.player.volume) ?? 0.7;
+  const router = useRouter();
+  const currentUserId = useAppSelector((s) => s.user.id);
   const muted = globalMuted && isActive;
   const [playing, setPlaying] = useState<boolean>(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -62,6 +66,24 @@ export default function VideoCard({
   const sliderRatio = sliderValue / 100;
   const volumeBarRef = useRef<HTMLDivElement | null>(null);
   const volumePointerIdRef = useRef<number | null>(null);
+  const normalizedHandle = post.user.handle?.startsWith("@")
+    ? post.user.handle.slice(1)
+    : post.user.handle;
+  const [authorUserId, setAuthorUserId] = useState<string | null>(null);
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState<boolean | null>(
+    null
+  );
+  const [followBusy, setFollowBusy] = useState<boolean>(false);
+  const [followError, setFollowError] = useState<string | null>(null);
+  const [followLoaded, setFollowLoaded] = useState<boolean>(false);
+  const authorProfileHref = normalizedHandle ? `/${normalizedHandle}` : null;
+  const isFollowing = Boolean(isFollowingAuthor);
+  const showFollowButton = Boolean(
+    authorUserId && (!currentUserId || authorUserId !== currentUserId)
+  );
+  const followButtonClasses = isFollowing
+    ? "ml-2 text-xs px-3 py-1 rounded-full border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20"
+    : "ml-2 text-xs px-3 py-1 rounded-full bg-white text-black font-semibold hover:opacity-90";
 
   const clearVolumeHideTimer = useCallback(() => {
     if (volumeHideTimerRef.current != null) {
@@ -85,6 +107,110 @@ export default function VideoCard({
     },
     [clearVolumeHideTimer]
   );
+  const handleNavigateToProfile = useCallback(() => {
+    if (!authorProfileHref) return;
+    router.push(authorProfileHref);
+  }, [authorProfileHref, router]);
+  const handleFollowToggle = useCallback(async () => {
+    if (
+      !authorUserId ||
+      authorUserId === currentUserId ||
+      followBusy ||
+      !followLoaded
+    ) {
+      return;
+    }
+    const action = isFollowing ? "unfollow" : "follow";
+    try {
+      setFollowBusy(true);
+      setFollowError(null);
+      await followUser({
+        targetUserId: authorUserId,
+        action,
+      });
+      setIsFollowingAuthor(action === "follow");
+    } catch (error: unknown) {
+      setFollowError(
+        error instanceof Error ? error.message : "Unable to update follow state"
+      );
+    } finally {
+      setFollowBusy(false);
+    }
+  }, [authorUserId, currentUserId, followBusy, followLoaded, isFollowing]);
+  useEffect(() => {
+    let cancelled = false;
+    const ctrl = new AbortController();
+
+    const loadFollowState = async () => {
+      if (!normalizedHandle) {
+        setAuthorUserId(null);
+        setIsFollowingAuthor(null);
+        setFollowLoaded(true);
+        return;
+      }
+
+      setFollowLoaded(false);
+      setFollowError(null);
+
+      try {
+        const lookup = await getUserIdByHandle(normalizedHandle, {
+          signal: ctrl.signal,
+        });
+        if (cancelled) return;
+        const userId = lookup?.userId ?? null;
+        setAuthorUserId(userId);
+
+        if (!userId) {
+          setIsFollowingAuthor(null);
+          setFollowLoaded(true);
+          return;
+        }
+
+        if (currentUserId && userId === currentUserId) {
+          setIsFollowingAuthor(null);
+          setFollowLoaded(true);
+          return;
+        }
+
+        try {
+          const profile = await getUserProfile(userId, {
+            signal: ctrl.signal,
+          });
+          if (cancelled) return;
+          setIsFollowingAuthor(Boolean(profile?.is_following));
+          setFollowLoaded(true);
+        } catch (error: unknown) {
+          if (cancelled) return;
+          const err = error as { name?: string; message?: string };
+          if (err?.name === "AbortError") return;
+          setIsFollowingAuthor(false);
+          setFollowError(
+            error instanceof Error
+              ? error.message
+              : "Unable to fetch follow status"
+          );
+          setFollowLoaded(true);
+        }
+      } catch (error: unknown) {
+        if (cancelled) return;
+        const err = error as { name?: string; message?: string };
+        if (err?.name === "AbortError") return;
+        setAuthorUserId(null);
+        setIsFollowingAuthor(null);
+        setFollowError(
+          error instanceof Error ? error.message : "Unable to fetch follow info"
+        );
+        setFollowLoaded(true);
+      }
+    };
+
+    void loadFollowState();
+
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+    };
+  }, [currentUserId, normalizedHandle]);
 
   const handleVolumeChange = useCallback(
     (value: number) => {
@@ -459,7 +585,10 @@ export default function VideoCard({
 
       pv.addEventListener("seeked", onSeeked);
       try {
-        pv.currentTime = Math.max(0, Math.min(time, (pv.duration || 0) - 0.001));
+        pv.currentTime = Math.max(
+          0,
+          Math.min(time, (pv.duration || 0) - 0.001)
+        );
       } catch {
         pv.removeEventListener("seeked", onSeeked);
       }
@@ -830,24 +959,47 @@ export default function VideoCard({
 
       <div className="absolute left-2 sm:left-4 bottom-20 sm:bottom-24 space-y-2 max-w-[80%] z-30">
         <div className="flex items-center gap-2">
-          <Image
-            src={post.user.avatar}
-            alt={`${post.user.name} avatar`}
-            width={32}
-            height={32}
-            className="w-8 h-8 rounded-full border border-white/10"
-            unoptimized
-          />
-          <div>
-            <p className="font-semibold leading-tight">{post.user.name}</p>
-            <p className="text-xs text-white/60 leading-tight">
-              {post.user.handle}
-            </p>
-          </div>
-          <button className="ml-2 text-xs px-3 py-1 rounded-full bg-white text-black font-semibold hover:opacity-90">
-            Follow
+          <button
+            type="button"
+            onClick={handleNavigateToProfile}
+            disabled={!authorProfileHref}
+            className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-70 pointer-events-auto"
+          >
+            <Image
+              src={post.user.avatar}
+              alt={`${post.user.name} avatar`}
+              width={32}
+              height={32}
+              className="w-8 h-8 rounded-full border border-white/10 cursor-pointer"
+              unoptimized
+            />
+            <span className="text-left">
+              <span className="block font-semibold leading-tight cursor-pointer w-fit">
+                {post.user.name}
+              </span>
+              <span className="block text-xs text-white/60 leading-tight cursor-pointer">
+                {post.user.handle}
+              </span>
+            </span>
           </button>
+          {showFollowButton ? (
+            <button
+              type="button"
+              onClick={handleFollowToggle}
+              disabled={!followLoaded || followBusy}
+              className={`${followButtonClasses} pointer-events-auto ${
+                !followLoaded || followBusy
+                  ? "opacity-60 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              {followBusy ? "..." : isFollowing ? "Following" : "Follow"}
+            </button>
+          ) : null}
         </div>
+        {followError ? (
+          <p className="text-xs text-red-400">{followError}</p>
+        ) : null}
         <p className="text-sm leading-snug">
           {post.caption}{" "}
           <span className="text-white/60">{post.tags.join(" ")}</span>
