@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import ChillChill from "@/components/ChillChill";
 import type { PostItem } from "@/interfaces";
@@ -14,7 +14,7 @@ interface PageProps {
 async function fetchPost(
   postId: string,
   cookie: string | undefined
-): Promise<PostItem> {
+): Promise<PostItem | null> {
   try {
     const data = await getPostById({ postId, cookie });
     return data.item;
@@ -26,6 +26,14 @@ async function fetchPost(
       (error as { status?: number }).status === 404
     ) {
       notFound();
+    }
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      (error as { status?: number }).status === 403
+    ) {
+      return null;
     }
     throw error;
   }
@@ -40,6 +48,11 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       params.postId,
       token ? `accessToken=${token}` : undefined
     );
+    if (!post) {
+      return {
+        title: "ChillChill",
+      };
+    }
     const description =
       post.caption?.slice(0, 140) ?? "Watch the latest video.";
     return {
@@ -74,6 +87,10 @@ export default async function FeedPostPage(props: PageProps) {
   const cookieHeader = token ? `accessToken=${token}` : undefined;
 
   const post = await fetchPost(params.postId, cookieHeader);
+
+  if (!post) {
+    redirect("/");
+  }
 
   let additionalItems: PostItem[] = [];
   let nextCursor: string | null = null;
