@@ -18,6 +18,8 @@ type VideoWithCapture = HTMLVideoElement & {
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
+const handleLookupCache = new Map<string, string | null>();
+
 export default function VideoCard({
   post,
   isActive = false,
@@ -152,53 +154,67 @@ export default function VideoCard({
       setFollowLoaded(false);
       setFollowError(null);
 
-      try {
-        const lookup = await getUserIdByHandle(normalizedHandle, {
-          signal: ctrl.signal,
-        });
-        if (cancelled) return;
-        const userId = lookup?.userId ?? null;
-        setAuthorUserId(userId);
+      let userId: string | null = null;
+      const cachedUserId = handleLookupCache.get(normalizedHandle);
 
-        if (!userId) {
-          setIsFollowingAuthor(null);
-          setFollowLoaded(true);
-          return;
-        }
-
-        if (currentUserId && userId === currentUserId) {
-          setIsFollowingAuthor(null);
-          setFollowLoaded(true);
-          return;
-        }
-
+      if (cachedUserId !== undefined) {
+        userId = cachedUserId;
+      } else {
         try {
-          const profile = await getUserProfile(userId, {
+          const lookup = await getUserIdByHandle(normalizedHandle, {
             signal: ctrl.signal,
           });
           if (cancelled) return;
-          setIsFollowingAuthor(Boolean(profile?.is_following));
-          setFollowLoaded(true);
+          userId = lookup?.userId ?? null;
+          handleLookupCache.set(normalizedHandle, userId);
         } catch (error: unknown) {
           if (cancelled) return;
           const err = error as { name?: string; message?: string };
           if (err?.name === "AbortError") return;
-          setIsFollowingAuthor(false);
+          setAuthorUserId(null);
+          setIsFollowingAuthor(null);
           setFollowError(
             error instanceof Error
               ? error.message
-              : "Unable to fetch follow status"
+              : "Unable to fetch follow info"
           );
           setFollowLoaded(true);
+          return;
         }
+      }
+
+      if (cancelled) return;
+
+      setAuthorUserId(userId);
+
+      if (!userId) {
+        setIsFollowingAuthor(null);
+        setFollowLoaded(true);
+        return;
+      }
+
+      if (currentUserId && userId === currentUserId) {
+        setIsFollowingAuthor(null);
+        setFollowLoaded(true);
+        return;
+      }
+
+      try {
+        const profile = await getUserProfile(userId, {
+          signal: ctrl.signal,
+        });
+        if (cancelled) return;
+        setIsFollowingAuthor(Boolean(profile?.is_following));
+        setFollowLoaded(true);
       } catch (error: unknown) {
         if (cancelled) return;
         const err = error as { name?: string; message?: string };
         if (err?.name === "AbortError") return;
-        setAuthorUserId(null);
-        setIsFollowingAuthor(null);
+        setIsFollowingAuthor(false);
         setFollowError(
-          error instanceof Error ? error.message : "Unable to fetch follow info"
+          error instanceof Error
+            ? error.message
+            : "Unable to fetch follow status"
         );
         setFollowLoaded(true);
       }
