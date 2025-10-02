@@ -71,7 +71,12 @@ export default function Feed({
       : "for-you";
     if (nextAlgo !== algo) {
       setAlgo(nextAlgo);
-      setIndex(0);
+    }
+    setIndex(0);
+    prefetchIndexRef.current = null;
+    const el = containerRef.current;
+    if (el) {
+      el.scrollTop = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, forcedAlgo]);
