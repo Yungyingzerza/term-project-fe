@@ -11,7 +11,10 @@ interface PageProps {
   }>;
 }
 
-async function fetchPost(postId: string, cookie: string | undefined): Promise<PostItem> {
+async function fetchPost(
+  postId: string,
+  cookie: string | undefined
+): Promise<PostItem> {
   try {
     const data = await getPostById({ postId, cookie });
     return data.item;
@@ -37,12 +40,15 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       params.postId,
       token ? `accessToken=${token}` : undefined
     );
-    const description = post.caption?.slice(0, 140) ?? "Watch the latest video.";
+    const description =
+      post.caption?.slice(0, 140) ?? "Watch the latest video.";
     return {
-      title: `${post.user?.handle ? `@${post.user.handle}` : post.user?.name ?? "Video"} • ModernTok`,
+      title: `${
+        post.user?.handle ? `@${post.user.handle}` : post.user?.name ?? "Video"
+      } • ChillChill`,
       description,
       openGraph: {
-        title: `${post.user?.name ?? "ModernTok"} on ModernTok`,
+        title: `${post.user?.name ?? "ChillChill"} on ChillChill`,
         description,
         type: "video.other",
         url: `/feed/${params.postId}`,
@@ -50,14 +56,14 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
       },
       twitter: {
         card: "player",
-        title: `${post.user?.name ?? "ModernTok"} on ModernTok`,
+        title: `${post.user?.name ?? "ChillChill"} on ChillChill`,
         description,
         images: post.thumbnail ? [post.thumbnail] : undefined,
       },
     };
   } catch {
     return {
-      title: "ModernTok",
+      title: "ChillChill",
     };
   }
 }
@@ -75,7 +81,11 @@ export default async function FeedPostPage(props: PageProps) {
   let algo: "for-you" | "following" = "for-you";
 
   try {
-    const feed = await getFeed({ algo: "for-you", limit: 8, cookie: cookieHeader });
+    const feed = await getFeed({
+      algo: "for-you",
+      limit: 8,
+      cookie: cookieHeader,
+    });
     algo = feed.algo;
     nextCursor = feed.paging?.nextCursor ?? null;
     hasMore = Boolean(feed.paging?.hasMore);
