@@ -31,21 +31,21 @@ export default function Sidebar() {
   } = useUserOrganizations({ enabled: isLoggedIn });
 
   const itemsBase = [
-    { icon: Home, label: "For You", link: "/" },
-    { icon: Users, label: "Following", link: "/following" },
-    { icon: Radio, label: "Live", link: "/live" },
-    { icon: Compass, label: "Explore", link: "/explore" },
-    { icon: MessageCircle, label: "Messages", link: "/messages" },
+    { icon: Home, label: "เพื่อคุณ", link: "/" },
+    { icon: Users, label: "กำลังติดตาม", link: "/following" },
+    { icon: Radio, label: "ไลฟ์สด", link: "/live" },
+    { icon: Compass, label: "สำรวจ", link: "/explore" },
+    { icon: MessageCircle, label: "ข้อความ", link: "/messages" },
     {
       icon: User,
-      label: "Profile",
+      label: "โปรไฟล์",
       link: user?.username ? `/${user.handle}` : "/profile",
     },
   ];
   const items = isLoggedIn
     ? itemsBase
     : itemsBase.filter(
-        (i) => !["Following", "Messages", "Profile"].includes(i.label)
+        (i) => !["กำลังติดตาม", "ข้อความ", "โปรไฟล์"].includes(i.label)
       );
   //handle navigation
   const handleNavigation = (link: string) => {
@@ -60,7 +60,7 @@ export default function Sidebar() {
       <div className="p-4 w-full">
         <div className="flex items-center gap-2 px-2 py-3 rounded-xl bg-white/5 border border-white/10">
           <Sparkles className="w-5 h-5" />
-          <span className="font-semibold">Discover</span>
+          <span className="font-semibold">ค้นพบ</span>
         </div>
         <nav className="mt-4 space-y-1">
           {items.map(({ icon: Icon, label, link }) => {
@@ -86,15 +86,15 @@ export default function Sidebar() {
         {isLoggedIn ? (
           <div className="mt-6">
             <p className="text-xs text-white/60 px-3 mb-2">
-              Your Organizations
+              องค์กรของคุณ
             </p>
             {orgStatus === "loading" ? (
               <div className="text-sm text-white/60 px-3 py-2">
-                Loading organizations...
+                กำลังโหลดองค์กร...
               </div>
             ) : orgStatus === "failed" ? (
               <div className="text-sm text-red-400 px-3 py-2">
-                {orgError || "Unable to load organizations"}
+                {orgError || "ไม่สามารถโหลดองค์กรได้"}
               </div>
             ) : organizations.length > 0 ? (
               organizations.map((org) => {
@@ -112,7 +112,7 @@ export default function Sidebar() {
                     {org.logo_url ? (
                       <Image
                         src={org.logo_url}
-                        alt={`${org.name} logo`}
+                        alt={`โลโก้ของ ${org.name}`}
                         width={32}
                         height={32}
                         className="w-8 h-8 rounded object-cover"
@@ -131,7 +131,7 @@ export default function Sidebar() {
               })
             ) : (
               <div className="text-sm text-white/60 px-3 py-2">
-                No organizations yet
+                ยังไม่มีองค์กร
               </div>
             )}
           </div>

@@ -27,6 +27,13 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 type Visibility = UploadVisibility;
 
+const VISIBILITY_LABELS: Record<Visibility, string> = {
+  Public: "สาธารณะ",
+  Friends: "เพื่อน",
+  Organizations: "องค์กร",
+  Private: "ส่วนตัว",
+};
+
 export default function UploadPage() {
   const ambientColor = useAppSelector((s) => s.player.ambientColor);
 
@@ -82,7 +89,7 @@ export default function UploadPage() {
     if (!file) return;
     const selectedOrgIds = postOrgs;
     if (visibility === "Organizations" && selectedOrgIds.length === 0) {
-      setUploadError("Select at least one organization");
+      setUploadError("โปรดเลือกองค์กรอย่างน้อยหนึ่งแห่ง");
       setUploadStatus("error");
       setProgressModalOpen(true);
       setUploadProgress(0);
@@ -121,7 +128,7 @@ export default function UploadPage() {
         ? error.response?.data?.message ?? error.message
         : error instanceof Error
         ? error.message
-        : "Failed to upload";
+        : "อัปโหลดไม่สำเร็จ";
       setUploadError(message);
       setUploadStatus("error");
     } finally {
@@ -130,12 +137,12 @@ export default function UploadPage() {
   };
 
   const hashtagSuggestions = [
-    "#ai",
-    "#coding",
-    "#travel",
-    "#food",
-    "#music",
-    "#wellness",
+    "#ชิลชิล",
+    "#เอไอ",
+    "#โค้ดดิ้ง",
+    "#ท่องเที่ยว",
+    "#สายกิน",
+    "#สุขภาพดี",
   ];
 
   return (
@@ -164,7 +171,7 @@ export default function UploadPage() {
                 <div className="w-8 h-8 rounded-lg bg-white text-black grid place-items-center">
                   <Upload className="w-4 h-4" />
                 </div>
-                <h1 className="text-xl sm:text-2xl font-extrabold">Upload</h1>
+                <h1 className="text-xl sm:text-2xl font-extrabold">อัปโหลด</h1>
               </div>
 
               {/* Content card */}
@@ -182,7 +189,7 @@ export default function UploadPage() {
                         onClick={onRemove}
                         className="cursor-pointer absolute top-2 right-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-black/60 border border-white/10 text-sm"
                       >
-                        <X className="w-4 h-4" /> Remove
+                        <X className="w-4 h-4" /> ลบ
                       </button>
                     </div>
                   ) : (
@@ -195,9 +202,9 @@ export default function UploadPage() {
                         <Video className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-semibold">Drag and drop a video</p>
+                        <p className="font-semibold">ลากและปล่อยไฟล์วิดีโอได้เลย</p>
                         <p className="text-white/70 text-sm">
-                          or choose a file below
+                          หรือเลือกไฟล์จากด้านล่าง
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center justify-center gap-2">
@@ -205,13 +212,13 @@ export default function UploadPage() {
                           onClick={onPickFile}
                           className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90 inline-flex items-center gap-1.5"
                         >
-                          <Upload className="w-4 h-4" /> Choose video
+                          <Upload className="w-4 h-4" /> เลือกวิดีโอ
                         </button>
                         <button
                           className="cursor-not-allowed px-3 py-2 rounded-xl bg-white/10 border border-white/10 text-white/70 inline-flex items-center gap-1.5"
-                          title="Images not supported yet"
+                          title="ยังไม่รองรับการอัปโหลดรูปภาพ"
                         >
-                          <ImageIcon className="w-4 h-4" /> Image (soon)
+                          <ImageIcon className="w-4 h-4" /> รูปภาพ (เร็วๆ นี้)
                         </button>
                       </div>
                       <input
@@ -222,7 +229,7 @@ export default function UploadPage() {
                         className="hidden"
                       />
                       <div className="mt-3 text-xs text-white/60">
-                        <p>MP4, MOV up to 200MB • 9:16 recommended</p>
+                        <p>รองรับไฟล์ MP4, MOV สูงสุด 200MB • แนะนำอัตราส่วน 9:16</p>
                       </div>
                     </div>
                   )}
@@ -234,13 +241,13 @@ export default function UploadPage() {
                     {/* Post in organizations */}
                     <div>
                       <label className="block text-sm text-white/80 mb-2">
-                        Post in organizations
+                        โพสต์ในองค์กร
                       </label>
                       <div className="group relative mb-2">
                         <input
                           value={postOrgQuery}
                           onChange={(e) => setPostOrgQuery(e.target.value)}
-                          placeholder="Search organizations"
+                          placeholder="ค้นหาองค์กร"
                           className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 outline-none focus:border-white/20"
                         />
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
@@ -267,7 +274,7 @@ export default function UploadPage() {
                               {o.logo_url ? (
                                 <Image
                                   src={o.logo_url}
-                                  alt={o.name}
+                                  alt={`โลโก้ของ ${o.name}`}
                                   width={16}
                                   height={16}
                                   className="w-4 h-4 rounded object-cover"
@@ -285,15 +292,14 @@ export default function UploadPage() {
                         {filteredPostChoices.length === 0 && (
                           <div className="text-sm text-white/60 px-1.5 py-1">
                             {organizationsStatus === "loading"
-                              ? "Loading organizations..."
-                              : "No organizations found"}
+                              ? "กำลังโหลดองค์กร..."
+                              : "ไม่พบองค์กร"}
                           </div>
                         )}
                       </div>
                       {postOrgs.length === 0 && (
                         <p className="mt-1 text-xs text-white/60">
-                          Optional: choose one or more organizations to post
-                          this in.
+                          ตัวเลือก: เลือกหนึ่งหรือหลายองค์กรเพื่อแชร์โพสต์นี้
                         </p>
                       )}
                     </div>
@@ -301,13 +307,13 @@ export default function UploadPage() {
                     {/* Caption */}
                     <div>
                       <label className="block text-sm text-white/80 mb-1">
-                        Caption
+                        คำบรรยาย
                       </label>
                       <textarea
                         value={caption}
                         onChange={(e) => setCaption(e.target.value)}
                         rows={4}
-                        placeholder="Say something about your video..."
+                        placeholder="เล่าเกี่ยวกับวิดีโอของคุณ..."
                         className="w-full resize-y rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
                       />
                       <div className="mt-1 text-xs text-white/60">
@@ -318,7 +324,7 @@ export default function UploadPage() {
                     {/* Hashtags suggestions */}
                     <div>
                       <div className="text-sm text-white/80 mb-2">
-                        Suggested hashtags
+                        แฮชแท็กแนะนำ
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {hashtagSuggestions.map((tag) => (
@@ -329,8 +335,7 @@ export default function UploadPage() {
                             }
                             className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-white/10 border border-white/10 text-sm text-white/90"
                           >
-                            <Hash className="w-4 h-4 text-white/70" />{" "}
-                            {tag.replace("#", "")}
+                            <Hash className="w-4 h-4 text-white/70" /> {tag}
                           </button>
                         ))}
                       </div>
@@ -339,7 +344,7 @@ export default function UploadPage() {
                     {/* Visibility */}
                     <div>
                       <label className="block text-sm text-white/80 mb-1">
-                        Who can view
+                        ใครสามารถดูได้
                       </label>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                         {(
@@ -368,7 +373,7 @@ export default function UploadPage() {
                             ) : (
                               <Building2 className="w-4 h-4" />
                             )}
-                            {v}
+                            {VISIBILITY_LABELS[v]}
                           </button>
                         ))}
                       </div>
@@ -376,7 +381,7 @@ export default function UploadPage() {
 
                     {/* Options */}
                     <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-sm">Allow comments</span>
+                      <span className="text-sm">อนุญาตให้แสดงความคิดเห็น</span>
                       <button
                         onClick={() => setAllowComments((s) => !s)}
                         className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
@@ -391,14 +396,14 @@ export default function UploadPage() {
                         ) : (
                           <X className="w-4 h-4" />
                         )}
-                        {allowComments ? "On" : "Off"}
+                        {allowComments ? "เปิด" : "ปิด"}
                       </button>
                     </div>
 
                     {/* Actions */}
                     <div className="flex items-center justify-end gap-2 pt-2">
                       <button className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15">
-                        Cancel
+                        ยกเลิก
                       </button>
                       <button
                         onClick={onPost}
@@ -433,7 +438,7 @@ export default function UploadPage() {
                         ) : (
                           <Upload className="w-4 h-4" />
                         )}
-                        Post
+                        โพสต์
                       </button>
                     </div>
                   </div>
@@ -473,17 +478,17 @@ export default function UploadPage() {
                 <div className="flex-1">
                   <h2 className="text-lg font-semibold text-white">
                     {uploadStatus === "success"
-                      ? "Upload complete"
+                      ? "อัปโหลดเสร็จแล้ว"
                       : uploadStatus === "error"
-                      ? "Upload failed"
-                      : "Uploading your video"}
+                      ? "อัปโหลดล้มเหลว"
+                      : "กำลังอัปโหลดวิดีโอของคุณ"}
                   </h2>
                   <p className="mt-1 text-sm text-white/70">
                     {uploadStatus === "error"
-                      ? uploadError ?? "Something went wrong. Please try again."
+                      ? uploadError ?? "เกิดข้อผิดพลาด โปรดลองอีกครั้ง"
                       : uploadStatus === "success"
-                      ? "Your post is ready. You can close this window or keep editing."
-                      : "Hang tight—this usually takes just a moment."}
+                      ? "โพสต์ของคุณพร้อมแล้ว สามารถปิดหน้าต่างนี้หรือแก้ไขต่อได้"
+                      : "โปรดรอสักครู่—โดยทั่วไปจะใช้เวลาไม่นาน"}
                   </p>
                 </div>
               </div>
@@ -504,10 +509,10 @@ export default function UploadPage() {
                 <div className="mt-3 flex items-center justify-between text-xs text-white/60">
                   <span>
                     {uploadStatus === "error"
-                      ? "Upload stalled"
+                      ? "การอัปโหลดหยุดชะงัก"
                       : uploadStatus === "success"
-                      ? "All done"
-                      : "Uploading"}
+                      ? "เสร็จเรียบร้อย"
+                      : "กำลังอัปโหลด"}
                   </span>
                   <span className="text-white/80">
                     {uploadStatus === "error"
@@ -528,10 +533,10 @@ export default function UploadPage() {
                   disabled={uploadStatus === "uploading"}
                 >
                   {uploadStatus === "error"
-                    ? "Dismiss"
+                    ? "ปิดหน้าต่าง"
                     : uploadStatus === "success"
-                    ? "Great!"
-                    : "Uploading…"}
+                    ? "เยี่ยม!"
+                    : "กำลังอัปโหลด…"}
                 </button>
               </div>
             </div>

@@ -50,12 +50,12 @@ export default function TopBar() {
           <div className="w-7 h-7 rounded-lg bg-white text-black grid place-items-center">
             CC
           </div>
-          <span className="hidden sm:inline">ChillChill</span>
+          <span className="hidden sm:inline">ชิลชิล</span>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
           <div className="group relative">
             <input
-              placeholder="Search"
+              placeholder="ค้นหา"
               className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-12 py-2.5 outline-none focus:border-white/20"
             />
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
@@ -71,7 +71,7 @@ export default function TopBar() {
                 className="hidden cursor-pointer sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
                 onClick={() => handleNavigation("/upload")}
               >
-                <Upload className="w-4 h-4" /> Upload
+                <Upload className="w-4 h-4" /> อัปโหลด
               </button>
               <div className="relative" ref={menuRef}>
                 <button
@@ -83,7 +83,7 @@ export default function TopBar() {
                   <Image
                     src={user?.picture_url || "https://i.pravatar.cc/80?img=5"}
                     className="w-8 h-8 rounded-full"
-                    alt="Profile menu"
+                    alt="เมนูโปรไฟล์"
                     width={32}
                     height={32}
                     unoptimized
@@ -106,7 +106,7 @@ export default function TopBar() {
                         );
                       }}
                     >
-                      Profile
+                      โปรไฟล์
                     </button>
                     <button
                       role="menuitem"
@@ -116,7 +116,7 @@ export default function TopBar() {
                         handleNavigation("/settings");
                       }}
                     >
-                      Settings
+                      การตั้งค่า
                     </button>
                   </div>
                 ) : null}
@@ -134,7 +134,7 @@ export default function TopBar() {
                 }
               }}
             >
-              Log in
+              เข้าสู่ระบบ
             </button>
           )}
         </div>

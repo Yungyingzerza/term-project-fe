@@ -46,7 +46,7 @@ export default function MessagesPage() {
 
   const DEFAULT_ME = useMemo(
     () => ({
-      name: user?.username || "You",
+      name: user?.username || "คุณ",
       avatar: user?.picture_url || "https://i.pravatar.cc/100?img=2",
     }),
     [user?.username, user?.picture_url]
@@ -59,23 +59,23 @@ export default function MessagesPage() {
       id: "c1",
       name: "Ava",
       avatar: "https://i.pravatar.cc/100?img=1",
-      lastMessage: "That cut was so clean!",
-      lastTime: "2m",
+      lastMessage: "ตัดต่อได้เนียนมากเลย!",
+      lastTime: "2 นาที",
       unread: 2,
     },
     {
       id: "c2",
       name: "Noah",
       avatar: "https://i.pravatar.cc/100?img=5",
-      lastMessage: "Going live in 10",
-      lastTime: "1h",
+      lastMessage: "กำลังไลฟ์ในอีก 10 นาที",
+      lastTime: "1 ชม.",
     },
     {
       id: "c3",
       name: "Mia",
       avatar: "https://i.pravatar.cc/100?img=8",
-      lastMessage: "Send the raw clip?",
-      lastTime: "yesterday",
+      lastMessage: "ขอไฟล์ต้นฉบับหน่อย?",
+      lastTime: "เมื่อวาน",
     },
   ]);
 
@@ -86,30 +86,30 @@ export default function MessagesPage() {
       {
         id: "m1",
         author: "them",
-        text: "That cut was so clean!",
+        text: "ตัดต่อได้เนียนมาก!",
         time: "09:41",
       },
       {
         id: "m2",
         author: "me",
-        text: "Thanks! Tried a new grade.",
+        text: "ขอบคุณนะ! ลองเกรดสีแบบใหม่ดู",
         time: "09:42",
         read: true,
       },
     ],
-    c2: [{ id: "m3", author: "them", text: "Going live in 10", time: "08:10" }],
+    c2: [{ id: "m3", author: "them", text: "จะไลฟ์ในอีก 10 นาที", time: "08:10" }],
     c3: [
       {
         id: "m4",
         author: "them",
-        text: "Send the raw clip?",
-        time: "yesterday",
+        text: "ขอไฟล์ต้นฉบับหน่อยได้ไหม?",
+        time: "เมื่อวาน",
       },
       {
         id: "m5",
         author: "me",
-        text: "Uploading now.",
-        time: "yesterday",
+        text: "กำลังอัปโหลดให้อยู่",
+        time: "เมื่อวาน",
         read: true,
       },
     ],
@@ -149,7 +149,7 @@ export default function MessagesPage() {
     // Update convo preview
     setConvos((prev) =>
       prev.map((c) =>
-        c.id === activeId ? { ...c, lastMessage: text, lastTime: "now" } : c
+        c.id === activeId ? { ...c, lastMessage: text, lastTime: "ขณะนี้" } : c
       )
     );
   };
@@ -182,7 +182,7 @@ export default function MessagesPage() {
               <div className="w-8 h-8 rounded-lg bg-white text-black grid place-items-center">
                 <MessageCircle className="w-4 h-4" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold">Messages</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold">ข้อความ</h1>
             </div>
 
             {/* Content: Conversations list + Chat panel */}
@@ -198,9 +198,9 @@ export default function MessagesPage() {
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search messages"
+                      placeholder="ค้นหาข้อความ"
                       className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 outline-none focus:border-white/20"
-                      aria-label="Search messages"
+                      aria-label="ค้นหาข้อความ"
                     />
                     <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
                   </div>
@@ -223,7 +223,7 @@ export default function MessagesPage() {
                       >
                         <Image
                           src={c.avatar}
-                          alt={`${c.name}'s avatar`}
+                          alt={`ภาพโปรไฟล์ของ ${c.name}`}
                           width={36}
                           height={36}
                           className="w-9 h-9 rounded-full border border-white/10 object-cover"
@@ -250,7 +250,7 @@ export default function MessagesPage() {
                   })}
                   {filtered.length === 0 && (
                     <div className="px-4 py-6 text-sm text-white/60">
-                      No conversations found.
+                      ไม่พบการสนทนา
                     </div>
                   )}
                 </div>
@@ -268,13 +268,17 @@ export default function MessagesPage() {
                   <button
                     className="lg:hidden cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 border border-white/10"
                     onClick={() => setShowChatOnMobile(false)}
-                    aria-label="Back to conversations"
+                    aria-label="กลับไปยังรายชื่อแชต"
                   >
                     <ArrowLeft className="w-4 h-4" />
                   </button>
                   <Image
                     src={active?.avatar || "https://i.pravatar.cc/100?img=1"}
-                    alt={`${active?.name || "Contact"} avatar`}
+                    alt={
+                      active?.name
+                        ? `ภาพโปรไฟล์ของ ${active.name}`
+                        : "ภาพโปรไฟล์ผู้ติดต่อ"
+                    }
                     width={36}
                     height={36}
                     className="w-9 h-9 rounded-full border border-white/10 object-cover"
@@ -282,7 +286,7 @@ export default function MessagesPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{active?.name}</p>
-                    <p className="text-xs text-white/70 truncate">Active now</p>
+                    <p className="text-xs text-white/70 truncate">ออนไลน์อยู่ตอนนี้</p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 border border-white/10">
@@ -312,7 +316,7 @@ export default function MessagesPage() {
                   ))}
                   {messages.length === 0 && (
                     <div className="text-center text-white/60 text-sm py-12">
-                      Say hi to start the conversation.
+                      ทักทายเพื่อเริ่มการสนทนา
                     </div>
                   )}
                 </div>
@@ -325,7 +329,7 @@ export default function MessagesPage() {
                         value={draft}
                         onChange={(e) => setDraft(e.target.value)}
                         rows={1}
-                        placeholder="Write a message"
+                        placeholder="เขียนข้อความ"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -335,17 +339,17 @@ export default function MessagesPage() {
                         className="w-full resize-none rounded-xl bg-white/5 border border-white/10 px-3 py-2 outline-none focus:border-white/20"
                       />
                       <div className="mt-1 text-[11px] text-white/60">
-                        Press Enter to send • Shift+Enter for newline
+                        กด Enter เพื่อส่ง • Shift+Enter เพื่อขึ้นบรรทัดใหม่
                       </div>
                     </div>
                     <button
                       onClick={onSend}
                       disabled={!draft.trim()}
                       className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white text-black font-semibold disabled:opacity-50"
-                      aria-label="Send message"
+                      aria-label="ส่งข้อความ"
                     >
                       <Send className="w-4 h-4" />
-                      Send
+                      ส่ง
                     </button>
                   </div>
                 </div>
@@ -377,7 +381,7 @@ function MessageBubble({
       {!isMe && (
         <Image
           src={themAvatar || "https://i.pravatar.cc/100?img=3"}
-          alt="Conversation avatar"
+          alt="ภาพโปรไฟล์คู่สนทนา"
           width={28}
           height={28}
           className="w-7 h-7 rounded-full border border-white/10 object-cover"
@@ -408,7 +412,7 @@ function MessageBubble({
       {isMe && (
         <Image
           src={meAvatar || "https://i.pravatar.cc/100?img=2"}
-          alt="Your avatar"
+          alt="ภาพโปรไฟล์ของคุณ"
           width={28}
           height={28}
           className="w-7 h-7 rounded-full border border-white/10 object-cover"

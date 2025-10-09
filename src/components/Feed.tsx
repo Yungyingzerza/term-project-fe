@@ -364,7 +364,7 @@ export default function Feed({
                   </button>
                 </div>
               ) : (
-                <p>{loading ? "Loading…" : "No posts yet."}</p>
+            <p>{loading ? "กำลังโหลด…" : "ยังไม่มีโพสต์"}</p>
               )}
             </div>
           </div>

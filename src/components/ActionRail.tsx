@@ -30,11 +30,11 @@ const REACTIONS: Array<{
   accent: string; // hex color for glow
   ring: string; // tailwind ring color
 }> = [
-  { key: "like", label: "Like", accent: "#0ea5e9", ring: "ring-sky-500/60" },
-  { key: "love", label: "Love", accent: "#f43f5e", ring: "ring-rose-500/60" },
-  { key: "haha", label: "Haha", accent: "#facc15", ring: "ring-yellow-400/60" },
-  { key: "sad", label: "Sad", accent: "#93c5fd", ring: "ring-blue-300/60" },
-  { key: "angry", label: "Angry", accent: "#dc2626", ring: "ring-red-600/60" },
+  { key: "like", label: "ถูกใจ", accent: "#0ea5e9", ring: "ring-sky-500/60" },
+  { key: "love", label: "รักเลย", accent: "#f43f5e", ring: "ring-rose-500/60" },
+  { key: "haha", label: "ขำดี", accent: "#facc15", ring: "ring-yellow-400/60" },
+  { key: "sad", label: "เศร้า", accent: "#93c5fd", ring: "ring-blue-300/60" },
+  { key: "angry", label: "โกรธ", accent: "#dc2626", ring: "ring-red-600/60" },
 ];
 
 export default function ActionRail({
@@ -403,14 +403,14 @@ export default function ActionRail({
             aria-label={
               reaction
                 ? REACTIONS.find((r) => r.key === reaction)?.label
-                : "React"
+                : "แสดงปฏิกิริยา"
             }
             title={
               reaction
                 ? `${
                     REACTIONS.find((r) => r.key === reaction)!.label
-                  } • Click to remove • Hold to choose`
-                : `React • Click to Like • Hold to choose`
+                  } • คลิกเพื่อยกเลิก • กดค้างเพื่อเลือก`
+                : `แสดงปฏิกิริยา • คลิกเพื่อถูกใจ • กดค้างเพื่อเลือก`
             }
             onMouseEnter={() => {
               if (!canHoverRef.current) return;
@@ -473,7 +473,7 @@ export default function ActionRail({
                 : "opacity-0 translate-x-1 pointer-events-none"
             )}
             role="radiogroup"
-            aria-label="Reactions"
+            aria-label="ปฏิกิริยา"
           >
             {REACTIONS.map((r) => (
               <button
@@ -514,7 +514,9 @@ export default function ActionRail({
           <span
             key={`${t.key}-${i}`}
             className="relative inline-grid place-items-center -mr-1"
-            title={`${t.key} • ${t.count}`}
+            title={`${
+              REACTIONS.find((r) => r.key === t.key)?.label ?? t.key
+            } • ${t.count}`}
           >
             <span
               className="absolute -z-10 h-4 w-4 rounded-full blur-[6px] opacity-60"
@@ -537,7 +539,7 @@ export default function ActionRail({
       <button
         onClick={() => setCommentsOpen(true)}
         className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
-        aria-label="Open comments"
+        aria-label="เปิดความคิดเห็น"
         data-prevent-feed-swipe
       >
         <MessageCircle className="w-6 h-6" />
@@ -574,7 +576,7 @@ export default function ActionRail({
               "grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60",
               saved && "ring-2 ring-white/60"
             )}
-            aria-label={saved ? "Unsave" : "Save"}
+            aria-label={saved ? "ยกเลิกบันทึก" : "บันทึก"}
           >
             <Bookmark className={classNames("w-6 h-6", saved && "fill-current")} />
           </button>
@@ -585,14 +587,16 @@ export default function ActionRail({
       <button
         onClick={copyShareLink}
         className="grid place-items-center w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
-        aria-label={shareCopied ? "Link copied" : "Copy share link"}
-        title={shareCopied ? "Link copied" : "Copy video link"}
+        aria-label={shareCopied ? "คัดลอกลิงก์แล้ว" : "คัดลอกลิงก์"}
+        title={
+          shareCopied ? "คัดลอกลิงก์แล้ว" : "คัดลอกลิงก์วิดีโอ"
+        }
         data-prevent-feed-swipe
       >
         <Share2 className="w-6 h-6" />
       </button>
       <div className="text-xs text-white/80 min-h-[1rem]" aria-live="polite">
-        {shareCopied ? "Copied" : ""}
+        {shareCopied ? "คัดลอกแล้ว" : ""}
       </div>
 
       {/* Comments overlay */}

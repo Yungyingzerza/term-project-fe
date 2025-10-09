@@ -82,7 +82,7 @@ export default function SettingsPage() {
       updateEmailsState(data.emails);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to load emails";
+        error instanceof Error ? error.message : "ไม่สามารถโหลดอีเมลได้";
       setEmailError(message);
     } finally {
       setEmailsLoading(false);
@@ -126,7 +126,7 @@ export default function SettingsPage() {
     const normalizedHandle = sanitizedHandle.toLowerCase();
 
     if (!sanitizedHandle) {
-      setAccountError("Handle is required.");
+      setAccountError("ต้องระบุแฮนด์เดิล");
       return;
     }
 
@@ -153,12 +153,12 @@ export default function SettingsPage() {
     }
 
     if (!hasAvatarFile && avatarDataUrl === "" && user?.picture_url) {
-      setAccountError("Upload a new profile image or keep the current one.");
+      setAccountError("โปรดอัปโหลดรูปโปรไฟล์ใหม่หรือใช้รูปเดิม");
       return;
     }
 
     if (remoteAvatarChanged && !/^https?:/i.test(avatarDataUrl)) {
-      setAccountError("Please upload the image before saving.");
+      setAccountError("โปรดอัปโหลดรูปก่อนบันทึก");
       return;
     }
 
@@ -195,7 +195,7 @@ export default function SettingsPage() {
       window.setTimeout(() => setSavedBurst(false), 1200);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to save account";
+        error instanceof Error ? error.message : "ไม่สามารถบันทึกบัญชีได้";
       setAccountError(message);
     } finally {
       setAccountSaving(false);
@@ -227,7 +227,7 @@ export default function SettingsPage() {
               <div className="w-8 h-8 rounded-lg bg-white text-black grid place-items-center">
                 <Settings className="w-4 h-4" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold">Settings</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold">การตั้งค่า</h1>
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
@@ -243,7 +243,7 @@ export default function SettingsPage() {
                           user?.picture_url ||
                           "https://i.pravatar.cc/100?img=1"
                         }
-                        alt="Avatar preview"
+                        alt="ภาพโปรไฟล์ตัวอย่าง"
                         width={48}
                         height={48}
                         className="w-full h-full object-cover"
@@ -253,30 +253,30 @@ export default function SettingsPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
                         <UserCog className="w-4 h-4 text-white/80" />
-                        <h2 className="font-semibold">Account</h2>
+                        <h2 className="font-semibold">บัญชี</h2>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                           <label className="block text-sm text-white/80 mb-1">
-                            Display name
+                            ชื่อที่แสดง
                           </label>
                           <input
                             value={username}
                             onChange={(e) => setUsernameLocal(e.target.value)}
-                            placeholder="Your name"
+                            placeholder="ชื่อของคุณ"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
                           />
                         </div>
                         <div>
                           <label className="block text-sm text-white/80 mb-1">
-                            Handle
+                            แฮนด์เดิล
                           </label>
                           <div className="flex rounded-xl border border-white/10 bg-white/5 focus-within:border-white/20">
                             <span className="px-3 py-2 text-sm text-white/60">@</span>
                             <input
                               value={handle}
                               onChange={(e) => setHandleLocal(e.target.value)}
-                              placeholder="handle"
+                              placeholder="แฮนด์เดิล"
                               className="w-full bg-transparent rounded-r-xl px-3 py-2 outline-none"
                             />
                           </div>
@@ -284,20 +284,20 @@ export default function SettingsPage() {
                         <div className="flex items-end gap-2">
                           <div className="flex-1">
                             <label className="block text-sm text-white/80 mb-1">
-                              Avatar
+                              รูปโปรไฟล์
                             </label>
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={onPickAvatar}
                                 className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90"
                               >
-                                Choose image
+                                เลือกรูปภาพ
                               </button>
                               <button
                                 onClick={onRemoveAvatar}
                                 className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15"
                               >
-                                Remove
+                                ลบ
                               </button>
                             </div>
                             <input
@@ -335,7 +335,7 @@ export default function SettingsPage() {
                           }}
                           className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5"
                         >
-                          <X className="w-4 h-4" /> Reset
+                          <X className="w-4 h-4" /> รีเซ็ต
                         </button>
                         <button
                           onClick={() => {
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                           className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold inline-flex items-center gap-1.5 relative disabled:opacity-60 disabled:cursor-not-allowed"
                         >
                           <Save className="w-4 h-4" />
-                          {accountSaving ? "Saving" : "Save"}
+                          {accountSaving ? "กำลังบันทึก" : "บันทึก"}
                           {savedBurst && (
                             <span
                               aria-hidden
@@ -365,11 +365,11 @@ export default function SettingsPage() {
                 <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <Shield className="w-4 h-4 text-white/80" />
-                    <h2 className="font-semibold">Privacy</h2>
+                    <h2 className="font-semibold">ความเป็นส่วนตัว</h2>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-sm">Show activity status</span>
+                      <span className="text-sm">แสดงสถานะการใช้งาน</span>
                       <button
                         onClick={() => setShowActivity((s) => !s)}
                         className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
@@ -384,7 +384,7 @@ export default function SettingsPage() {
                         ) : (
                           <X className="w-4 h-4" />
                         )}
-                        {showActivity ? "On" : "Off"}
+                        {showActivity ? "เปิด" : "ปิด"}
                       </button>
                     </div>
                     {/* Allow mentions is disabled/commented for now */}
@@ -395,20 +395,20 @@ export default function SettingsPage() {
                 <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <Shield className="w-4 h-4 text-white/80" />
-                    <h2 className="font-semibold">Danger Zone</h2>
+                    <h2 className="font-semibold">โซนอันตราย</h2>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5"
-                      title="No-op in demo"
+                      title="โหมดตัวอย่างยังไม่เปิดใช้งาน"
                     >
-                      <LogOut className="w-4 h-4" /> Log out
+                      <LogOut className="w-4 h-4" /> ออกจากระบบ
                     </button>
                     <button
                       className="cursor-pointer px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-200 hover:bg-red-500/30 inline-flex items-center gap-1.5"
-                      title="No-op in demo"
+                      title="โหมดตัวอย่างยังไม่เปิดใช้งาน"
                     >
-                      <Trash2 className="w-4 h-4" /> Delete account
+                      <Trash2 className="w-4 h-4" /> ลบบัญชี
                     </button>
                   </div>
                 </div>
@@ -459,11 +459,11 @@ function EmailsEditor({
     setError(null);
     if (!email) return;
     if (!isValidEmail(email)) {
-      setStatus({ type: "error", message: "Enter a valid email address." });
+      setStatus({ type: "error", message: "กรุณากรอกอีเมลที่ถูกต้อง" });
       return;
     }
     if (emails.some((e) => e.email.toLowerCase() === email)) {
-      setStatus({ type: "error", message: "Email already added." });
+      setStatus({ type: "error", message: "อีเมลนี้ถูกเพิ่มไว้แล้ว" });
       return;
     }
     setSendingOtp(true);
@@ -472,11 +472,11 @@ function EmailsEditor({
       setOtpEmail(email);
       setStatus({
         type: "success",
-        message: `Verification code sent to ${email}. It expires in 5 minutes.`,
+        message: `ส่งรหัสยืนยันไปที่ ${email} แล้ว รหัสจะหมดอายุภายใน 5 นาที`,
       });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to send verification code.";
+        err instanceof Error ? err.message : "ส่งรหัสยืนยันไม่สำเร็จ";
       setStatus({ type: "error", message });
     } finally {
       setSendingOtp(false);
@@ -489,20 +489,20 @@ function EmailsEditor({
     setStatus(null);
     setError(null);
     if (!otp) {
-      setStatus({ type: "error", message: "Enter the 6-digit code." });
+      setStatus({ type: "error", message: "กรุณากรอกโค้ด 6 หลัก" });
       return;
     }
     setVerifyingOtp(true);
     try {
       const res = await createEmailApi({ email: otpEmail, otp });
       onEmailsChange([...emails, res.email]);
-      setStatus({ type: "success", message: "Email added successfully." });
+      setStatus({ type: "success", message: "เพิ่มอีเมลเรียบร้อยแล้ว" });
       setNewEmail("");
       setOtpEmail(null);
       setOtpValue("");
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to verify code.";
+        err instanceof Error ? err.message : "ยืนยันรหัสไม่สำเร็จ";
       setStatus({ type: "error", message });
     } finally {
       setVerifyingOtp(false);
@@ -516,10 +516,10 @@ function EmailsEditor({
     try {
       await deleteEmailApi(emailId);
       onEmailsChange(emails.filter((e) => e._id !== emailId));
-      setStatus({ type: "success", message: "Email removed." });
+      setStatus({ type: "success", message: "ลบอีเมลแล้ว" });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Failed to remove email.";
+        err instanceof Error ? err.message : "ลบอีเมลไม่สำเร็จ";
       setStatus({ type: "error", message });
     } finally {
       setDeletingId(null);
@@ -539,14 +539,14 @@ function EmailsEditor({
 
   return (
     <div className="md:col-span-3">
-      <label className="block text-sm text-white/80 mb-1">Emails</label>
+      <label className="block text-sm text-white/80 mb-1">อีเมล</label>
       <div className="flex flex-col gap-2 rounded-2xl border border-white/10 bg-neutral-950/40 p-3">
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="you@company.com"
+            placeholder="คุณ@company.com"
             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20"
             type="email"
             disabled={sendingOtp || verifyingOtp}
@@ -559,7 +559,7 @@ function EmailsEditor({
               disabled={sendingOtp || verifyingOtp}
               className="cursor-pointer px-3 py-2 rounded-xl bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {sendingOtp ? "Sending…" : "Send code"}
+              {sendingOtp ? "กำลังส่ง…" : "ส่งรหัส"}
             </button>
             {otpEmail ? (
               <button
@@ -569,7 +569,7 @@ function EmailsEditor({
                 disabled={verifyingOtp}
                 className="cursor-pointer px-3 py-2 rounded-xl bg-emerald-500/90 text-black font-semibold hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {verifyingOtp ? "Verifying…" : "Verify"}
+                {verifyingOtp ? "กำลังตรวจสอบ…" : "ยืนยัน"}
               </button>
             ) : null}
           </div>
@@ -580,13 +580,13 @@ function EmailsEditor({
               value={otpValue}
               onChange={(e) => setOtpValue(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Enter 6-digit code"
+              placeholder="กรอกโค้ด 6 หลัก"
               className="w-full sm:w-48 bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:border-white/20 tracking-[0.3em]"
               inputMode="numeric"
               maxLength={6}
             />
             <span className="text-xs text-white/50 self-center">
-              Sent to <strong>{otpEmail}</strong>
+              ส่งไปที่ <strong>{otpEmail}</strong>
             </span>
           </div>
         ) : null}
@@ -602,7 +602,7 @@ function EmailsEditor({
         {error ? <p className="text-xs text-rose-300">{error}</p> : null}
         <div className="mt-2 space-y-2">
           {loading ? (
-            <p className="text-sm text-white/60">Loading emails…</p>
+            <p className="text-sm text-white/60">กำลังโหลดอีเมล…</p>
           ) : emails.length > 0 ? (
             emails.map((email) => (
               <div
@@ -619,17 +619,17 @@ function EmailsEditor({
                   disabled={deletingId === email._id}
                   className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-black/40 border border-white/10 px-2.5 py-1.5 text-xs hover:bg-black/60 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {deletingId === email._id ? "Removing…" : "Remove"}
+                  {deletingId === email._id ? "กำลังลบ…" : "ลบ"}
                 </button>
               </div>
             ))
           ) : (
-            <p className="text-sm text-white/60">No emails added yet.</p>
+            <p className="text-sm text-white/60">ยังไม่มีการเพิ่มอีเมล</p>
           )}
         </div>
       </div>
       <p className="mt-1 text-xs text-white/60">
-        We use your email domains to identify your organizations.
+        เราใช้อีเมลโดเมนของคุณเพื่อระบุองค์กรที่เกี่ยวข้อง
       </p>
     </div>
   );

@@ -133,7 +133,7 @@ export default function VideoCard({
       setIsFollowingAuthor(action === "follow");
     } catch (error: unknown) {
       setFollowError(
-        error instanceof Error ? error.message : "Unable to update follow state"
+        error instanceof Error ? error.message : "ไม่สามารถอัปเดตสถานะการติดตามได้"
       );
     } finally {
       setFollowBusy(false);
@@ -176,7 +176,7 @@ export default function VideoCard({
           setFollowError(
             error instanceof Error
               ? error.message
-              : "Unable to fetch follow info"
+              : "ไม่สามารถดึงข้อมูลการติดตามได้"
           );
           setFollowLoaded(true);
           return;
@@ -214,7 +214,7 @@ export default function VideoCard({
         setFollowError(
           error instanceof Error
             ? error.message
-            : "Unable to fetch follow status"
+            : "ไม่สามารถเช็กสถานะการติดตามได้"
         );
         setFollowLoaded(true);
       }
@@ -983,7 +983,7 @@ export default function VideoCard({
           >
             <Image
               src={post.user.avatar}
-              alt={`${post.user.name} avatar`}
+              alt={`ภาพโปรไฟล์ของ ${post.user.name}`}
               width={32}
               height={32}
               className="w-8 h-8 rounded-full border border-white/10 cursor-pointer"
@@ -1009,7 +1009,7 @@ export default function VideoCard({
                   : ""
               }`}
             >
-              {followBusy ? "..." : isFollowing ? "Following" : "Follow"}
+              {followBusy ? "..." : isFollowing ? "กำลังติดตาม" : "ติดตาม"}
             </button>
           ) : null}
         </div>
@@ -1032,7 +1032,7 @@ export default function VideoCard({
             onClick={() => dispatch(toggleMuted())}
             onPointerDown={handleVolumeButtonPointerDown}
             className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
-            aria-label={globalMuted ? "Unmute video" : "Mute video"}
+            aria-label={globalMuted ? "เปิดเสียงวิดีโอ" : "ปิดเสียงวิดีโอ"}
           >
             {globalMuted ? (
               <VolumeX className="w-5 h-5" />
@@ -1076,7 +1076,7 @@ export default function VideoCard({
               </div>
               <div className="flex flex-col items-end gap-1">
                 <span className="text-[11px] uppercase tracking-[0.18em] text-white/50">
-                  Volume
+                  ระดับเสียง
                 </span>
                 <span className="text-base font-semibold text-white">
                   {sliderValue}%
@@ -1089,7 +1089,7 @@ export default function VideoCard({
               max={100}
               step={1}
               value={sliderValue}
-              aria-label="Volume"
+              aria-label="ระดับเสียง"
               className="sr-only"
               onChange={(e) => {
                 const next = Number(e.target.value) / 100;
@@ -1100,7 +1100,7 @@ export default function VideoCard({
               onBlur={() => scheduleVolumeTrayClose(400)}
             />
             <p className="mt-2 text-[11px] text-white/55">
-              Drag or tap the slider to set your volume.
+              ลากหรือแตะตัวเลื่อนเพื่อปรับระดับเสียง
             </p>
           </div>
         </div>

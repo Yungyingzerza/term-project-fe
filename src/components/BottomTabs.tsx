@@ -17,24 +17,24 @@ export default function BottomTabs() {
   const user = useAppSelector((s) => s.user);
   const isLoggedIn = !!(user?.id || user?.username);
   const tabsBase = [
-    { icon: Home, label: "Home", link: "/" },
-    { icon: Compass, label: "Explore", link: "/explore" },
-    { icon: Plus, label: "Create", link: "/upload" },
-    { icon: MessageCircle, label: "Messages", link: "/messages" },
+    { icon: Home, label: "หน้าหลัก", link: "/" },
+    { icon: Compass, label: "สำรวจ", link: "/explore" },
+    { icon: Plus, label: "สร้าง", link: "/upload" },
+    { icon: MessageCircle, label: "ข้อความ", link: "/messages" },
     {
       icon: User,
-      label: "Profile",
+      label: "โปรไฟล์",
       link: user?.handle ? `/${user.handle}` : "/profile",
     },
   ];
   const tabs = isLoggedIn
     ? tabsBase
     : [
-        { icon: Home, label: "Home", link: "/" },
-        { icon: Compass, label: "Explore", link: "/explore" },
+        { icon: Home, label: "หน้าหลัก", link: "/" },
+        { icon: Compass, label: "สำรวจ", link: "/explore" },
         {
           icon: User,
-          label: "Login",
+          label: "เข้าสู่ระบบ",
           link: `${process.env.NEXT_PUBLIC_BASE_API || ""}/line/authentication`,
           external: true as const,
         },

@@ -23,13 +23,13 @@ function timeAgo(iso: string): string {
     const ts = new Date(iso).getTime();
     const now = Date.now();
     const s = Math.max(1, Math.round((now - ts) / 1000));
-    if (s < 60) return `${s}s`;
+    if (s < 60) return `${s} วิ`;
     const m = Math.round(s / 60);
-    if (m < 60) return `${m}m`;
+    if (m < 60) return `${m} นาที`;
     const h = Math.round(m / 60);
-    if (h < 24) return `${h}h`;
+    if (h < 24) return `${h} ชม.`;
     const d = Math.round(h / 24);
-    if (d < 7) return `${d}d`;
+    if (d < 7) return `${d} วัน`;
     return new Date(iso).toLocaleDateString();
   } catch {
     return "";
@@ -115,15 +115,15 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
           open ? "translate-y-0" : "translate-y-full sm:translate-y-0 sm:translate-x-full"
         )}
         role="dialog"
-        aria-label="Comments"
+        aria-label="ความคิดเห็น"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-          <div className="font-semibold text-white">Comments</div>
+          <div className="font-semibold text-white">ความคิดเห็น</div>
           <button
             onClick={onClose}
             className="p-1 rounded hover:bg-white/10"
-            aria-label="Close comments"
+            aria-label="ปิดความคิดเห็น"
           >
             <X className="w-5 h-5" />
           </button>
@@ -134,7 +134,7 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
             <div key={c.id} className="flex items-start gap-2">
               <Image
                 src={c.user.avatar}
-                alt={`${c.user.handle}'s avatar`}
+                alt={`ภาพโปรไฟล์ของ ${c.user.handle}`}
                 width={32}
                 height={32}
                 className="w-8 h-8 rounded-full border border-white/10"
@@ -145,7 +145,7 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
                   <span className="font-semibold truncate max-w-[10rem] text-white">{c.user.handle}</span>
                   <span className="text-white/50 text-xs">{timeAgo(c.createdAt)}</span>
                   {c.visibility === "OwnerOnly" && (
-                    <span className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/80">Owner</span>
+                    <span className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/80">เจ้าของ</span>
                   )}
                 </div>
                 <div className="text-sm whitespace-pre-wrap break-words text-white">{c.text}</div>
@@ -159,10 +159,10 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
                 disabled={loading}
                 className="w-full text-sm py-1.5 rounded bg-white/10 hover:bg-white/15 disabled:opacity-60 text-white"
               >
-                {loading ? "Loading..." : "Load more"}
+                {loading ? "กำลังโหลด..." : "โหลดเพิ่มเติม"}
               </button>
             ) : (
-              <div className="text-center text-xs text-white/70">No more comments</div>
+              <div className="text-center text-xs text-white/70">ไม่มีความคิดเห็นเพิ่มเติม</div>
             )}
           </div>
         </div>
@@ -175,8 +175,8 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
                 onChange={(e) => setVisibility(e.target.value as CommentVisibility)}
                 className="text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:bg-black/60 text-white"
               >
-                <option value="Public">Public</option>
-                <option value="OwnerOnly">Owner only</option>
+                <option value="Public">สาธารณะ</option>
+                <option value="OwnerOnly">เฉพาะเจ้าของ</option>
               </select>
               <input
                 ref={inputRef}
@@ -188,7 +188,7 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
                     onSubmit();
                   }
                 }}
-                placeholder="Add a comment..."
+                placeholder="เขียนความคิดเห็น..."
                 className="flex-1 text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
               />
               <button
@@ -196,17 +196,17 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
                 disabled={!text.trim()}
                 className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60"
               >
-                Send
+                ส่ง
               </button>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs text-white/70">Sign in to comment</div>
+              <div className="text-xs text-white/70">เข้าสู่ระบบเพื่อแสดงความคิดเห็น</div>
               <a
                 href={`${process.env.NEXT_PUBLIC_BASE_API}/line/authentication`}
                 className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90"
               >
-                Sign in
+                เข้าสู่ระบบ
               </a>
             </div>
           )}

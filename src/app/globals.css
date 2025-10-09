@@ -1,4 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap");
 @import "tailwindcss";
+
+:root {
+  font-family: "Noto Sans Thai", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  font-family: inherit;
+}
 
 /* Local keyframes for the reaction burst so we don't rely on Tailwind's built-in ping */
 @keyframes burst {

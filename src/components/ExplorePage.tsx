@@ -16,70 +16,70 @@ type ExploreItem = {
 };
 
 const TRENDING_TAGS: string[] = [
-  "#ai",
-  "#coding",
-  "#design",
-  "#wellness",
-  "#foodie",
-  "#travel",
-  "#gaming",
-  "#learninpublic",
+  "#เอไอ",
+  "#โค้ดดิ้ง",
+  "#ออกแบบ",
+  "#สุขภาพ",
+  "#สายกิน",
+  "#ท่องเที่ยว",
+  "#เกมมิ่ง",
+  "#แชร์การเรียนรู้",
 ];
 
 const EXPLORE_ITEMS: ExploreItem[] = [
   {
     id: "e1",
-    title: "Ambient desk setup tour",
+    title: "พาทัวร์โต๊ะทำงานบรรยากาศสบาย",
     thumbnail:
       "https://images.unsplash.com/photo-1518779578993-ec3579fee39f?q=80&w=1600&auto=format&fit=crop",
     views: 12800,
     duration: "00:27",
-    tag: "#setup",
+    tag: "#จัดโต๊ะ",
   },
   {
     id: "e2",
-    title: "Ramen hack in 10 minutes",
+    title: "ทริกทำราเมนใน 10 นาที",
     thumbnail:
       "https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?q=80&w=1600&auto=format&fit=crop",
     views: 51200,
     duration: "00:42",
-    tag: "#ramen",
+    tag: "#ราเมง",
   },
   {
     id: "e3",
-    title: "Posture reset for desk workers",
+    title: "ยืดเส้นแก้อิริยาบถชาวออฟฟิศ",
     thumbnail:
       "https://images.unsplash.com/photo-1519823551278-64ac92734fb1?q=80&w=1600&auto=format&fit=crop",
     views: 302100,
     duration: "01:12",
-    tag: "#wellness",
+    tag: "#สุขภาพดี",
   },
   {
     id: "e4",
-    title: "City night timelapse",
+    title: "ไทม์แลปส์เมืองยามค่ำคืน",
     thumbnail:
       "https://images.unsplash.com/photo-1499346030926-9a72daac6c63?q=80&w=1600&auto=format&fit=crop",
     views: 9250,
     duration: "00:18",
-    tag: "#city",
+    tag: "#เมือง",
   },
   {
     id: "e5",
-    title: "Cute bear montage",
+    title: "รวมช็อตเจ้าหมีสุดน่ารัก",
     thumbnail:
       "https://images.unsplash.com/photo-1516375199443-2b5277b2aeb0?q=80&w=1600&auto=format&fit=crop",
     views: 1234000,
     duration: "00:09",
-    tag: "#wildlife",
+    tag: "#สัตว์ป่า",
   },
   {
     id: "e6",
-    title: "AI color grading walkthrough",
+    title: "สอนเกรดสีด้วย AI ขั้นตอนต่อขั้นตอน",
     thumbnail:
       "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1600&auto=format&fit=crop",
     views: 44700,
     duration: "00:36",
-    tag: "#ai",
+    tag: "#เอไอ",
   },
 ];
 
@@ -117,21 +117,20 @@ export default function ExplorePage() {
               <div className="w-8 h-8 rounded-lg bg-white text-black grid place-items-center">
                 <Sparkles className="w-4 h-4" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-extrabold">Explore</h1>
+              <h1 className="text-xl sm:text-2xl font-extrabold">สำรวจ</h1>
             </div>
 
             {/* Trending chips */}
             <div className="flex gap-2.5 flex-wrap mb-5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 text-sm">
-                <Flame className="w-4 h-4" /> Trending now
+                <Flame className="w-4 h-4" /> กำลังมาแรง
               </span>
               {TRENDING_TAGS.map((t) => (
                 <button
                   key={t}
                   className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-white/10 border border-white/10 text-sm text-white/90"
                 >
-                  <Hash className="w-4 h-4 text-white/70" />{" "}
-                  {t.replace("#", "")}
+                  <Hash className="w-4 h-4 text-white/70" /> {t}
                 </button>
               ))}
             </div>
@@ -146,7 +145,7 @@ export default function ExplorePage() {
                   tabIndex={0}
                   aria-label={`${item.title} • ${formatCount(
                     item.views
-                  )} views`}
+                  )} ครั้งรับชม`}
                 >
                   <Image
                     src={item.thumbnail}
@@ -183,7 +182,7 @@ export default function ExplorePage() {
                       {item.title}
                     </p>
                     <p className="text-[11px] text-white/80">
-                      {formatCount(item.views)} views
+                      {formatCount(item.views)} ครั้งรับชม
                     </p>
                   </div>
                 </div>
