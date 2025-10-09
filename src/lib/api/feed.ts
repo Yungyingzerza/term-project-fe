@@ -40,8 +40,25 @@ export interface UserFeedResponse {
   };
 }
 
+export interface OrganizationFeedResponse {
+  items: PostItem[];
+  paging: {
+    nextCursor: string | null;
+    hasMore: boolean;
+  };
+}
+
 export interface GetUserFeedParams {
   handle: string;
+  limit?: number;
+  cursor?: string | null;
+  signal?: AbortSignal;
+  /** Optional cookie string for SSR (e.g., `accessToken=...; refreshToken=...`). */
+  cookie?: string;
+}
+
+export interface GetOrganizationFeedParams {
+  orgId: string;
   limit?: number;
   cursor?: string | null;
   signal?: AbortSignal;
@@ -127,5 +144,38 @@ export async function getFeedByUserHandle({ handle, limit = 10, cursor, signal, 
   }
 
   const data = (await res.json()) as UserFeedResponse;
+  return data;
+}
+
+export async function getFeedByOrganizationId({
+  orgId,
+  limit = 10,
+  cursor,
+  signal,
+  cookie,
+}: GetOrganizationFeedParams): Promise<OrganizationFeedResponse> {
+  const url = buildApiUrl(`feed/organization/${encodeURIComponent(orgId)}`);
+  if (limit != null) url.searchParams.set("limit", String(limit));
+  if (cursor) url.searchParams.set("cursor", cursor);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch organization feed ${orgId}: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`
+    );
+  }
+
+  const data = (await res.json()) as OrganizationFeedResponse;
   return data;
 }

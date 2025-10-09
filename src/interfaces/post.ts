@@ -28,4 +28,6 @@ export interface PostItem {
   createdAt?: string;
   /** ISO timestamp for the last update to the post. */
   updatedAt?: string;
+  /** Organization IDs the post is shared with (if provided by API). */
+  orgViewIds?: string[];
 }

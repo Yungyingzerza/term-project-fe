@@ -12,6 +12,7 @@ interface FeedProps {
   seedHasMore?: boolean;
   autoFetch?: boolean;
   forcedAlgo?: FeedAlgo;
+  organizationId?: string | null;
 }
 
 // How many items to preload relative to the active index
@@ -35,6 +36,7 @@ export default function Feed({
   seedHasMore = true,
   autoFetch = true,
   forcedAlgo,
+  organizationId = null,
 }: FeedProps = {}) {
   const pathname = usePathname();
   const derivedAlgo = forcedAlgo
@@ -50,6 +52,7 @@ export default function Feed({
       seedItems,
       seedCursor,
       seedHasMore,
+      organizationId,
     });
 
   const [index, setIndex] = useState<number>(0);

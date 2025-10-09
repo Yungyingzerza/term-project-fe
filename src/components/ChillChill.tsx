@@ -13,6 +13,7 @@ interface ChillChillProps {
   seedHasMore?: boolean;
   autoFetch?: boolean;
   forcedAlgo?: FeedAlgo;
+  organizationId?: string | null;
 }
 
 export default function ChillChill({
@@ -21,6 +22,7 @@ export default function ChillChill({
   seedHasMore = true,
   autoFetch = true,
   forcedAlgo,
+  organizationId = null,
 }: ChillChillProps = {}) {
   const ambientColor = useAppSelector((s) => s.player.ambientColor);
   return (
@@ -44,6 +46,7 @@ export default function ChillChill({
           seedHasMore={seedHasMore}
           autoFetch={autoFetch}
           forcedAlgo={forcedAlgo}
+          organizationId={organizationId}
         />
       </div>
       <div className="relative z-10">

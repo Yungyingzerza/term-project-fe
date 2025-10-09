@@ -5,6 +5,7 @@ import {
   FeedAlgo,
   getFeed as getFeedApi,
   getFeedByUserHandle as getFeedByUserHandleApi,
+  getFeedByOrganizationId as getFeedByOrganizationIdApi,
   GetFeedParams,
 } from "@/lib/api/feed";
 export type {
@@ -13,6 +14,8 @@ export type {
   GetFeedParams,
   UserFeedResponse,
   GetUserFeedParams,
+  OrganizationFeedResponse,
+  GetOrganizationFeedParams,
 } from "@/lib/api/feed";
 
 /**
@@ -38,6 +41,8 @@ export interface UseFeedOptions {
   seedCursor?: string | null;
   /** Whether more data is expected after the seeded items. */
   seedHasMore?: boolean;
+  /** Organization ID to scope the feed to (uses organization feed endpoint when provided). */
+  organizationId?: string | null;
 }
 
 // User feed by handle
@@ -72,6 +77,7 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
     seedItems = [],
     seedCursor = null,
     seedHasMore = true,
+    organizationId = null,
   } = opts;
 
   const [algo, setAlgo] = useState<FeedAlgo>(initialAlgo);
@@ -96,12 +102,20 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
       const ctrl = new AbortController();
       inFlight.current = ctrl;
       try {
-        const data = await getFeedApi({
-          algo,
-          limit,
-          cursor: mode === "reset" ? null : nextCursor,
-          signal: ctrl.signal,
-        });
+        const cursorValue = mode === "reset" ? null : nextCursor;
+        const data = organizationId
+          ? await getFeedByOrganizationIdApi({
+              orgId: organizationId,
+              limit,
+              cursor: cursorValue,
+              signal: ctrl.signal,
+            })
+          : await getFeedApi({
+              algo,
+              limit,
+              cursor: cursorValue,
+              signal: ctrl.signal,
+            });
         setHasMore(!!data?.paging?.hasMore);
         setNextCursor(data?.paging?.nextCursor ?? null);
         setItems((prev) =>
@@ -118,7 +132,7 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
         setLoading(false);
       }
     },
-    [algo, limit, nextCursor]
+    [algo, limit, nextCursor, organizationId]
   );
 
   const refetch = useCallback(async () => doFetch("reset"), [doFetch]);
@@ -147,7 +161,7 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
       void refetch();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [algo, enabled, limit]);
+  }, [algo, enabled, limit, organizationId]);
 
   // Remove extra auto-fetch to avoid duplicate initial requests.
 

@@ -97,30 +97,38 @@ export default function Sidebar() {
                 {orgError || "Unable to load organizations"}
               </div>
             ) : organizations.length > 0 ? (
-              organizations.map((org) => (
-                <div
-                  key={org._id}
-                  className="cursor-pointer flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition"
-                >
-                  {org.logo_url ? (
-                    <Image
-                      src={org.logo_url}
-                      alt={`${org.name} logo`}
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded object-cover"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded bg-white/10 border border-white/10 grid place-items-center text-sm font-semibold">
-                      {org.name?.[0]?.toUpperCase() ?? "?"}
+              organizations.map((org) => {
+                const link = `/organization/${org._id}`;
+                const isActive = pathname?.startsWith(link);
+                return (
+                  <button
+                    key={org._id}
+                    onClick={() => handleNavigation(link)}
+                    className={classNames(
+                      "cursor-pointer w-full flex items-center px-3 py-2 rounded-xl hover:bg-white/5 transition text-left",
+                      isActive && "bg-white/10"
+                    )}
+                  >
+                    {org.logo_url ? (
+                      <Image
+                        src={org.logo_url}
+                        alt={`${org.name} logo`}
+                        width={32}
+                        height={32}
+                        className="w-8 h-8 rounded object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-white/10 border border-white/10 grid place-items-center text-sm font-semibold">
+                        {org.name?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                    )}
+                    <div className="ml-3 leading-tight">
+                      <p className="text-sm font-semibold">{org.name}</p>
                     </div>
-                  )}
-                  <div className="ml-3 leading-tight">
-                    <p className="text-sm font-semibold">{org.name}</p>
-                  </div>
-                </div>
-              ))
+                  </button>
+                );
+              })
             ) : (
               <div className="text-sm text-white/60 px-3 py-2">
                 No organizations yet
