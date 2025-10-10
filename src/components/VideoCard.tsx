@@ -50,7 +50,9 @@ export default function VideoCard({
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const watchAccumulatorRef = useRef<number>(0);
   const watchStartTimestampRef = useRef<number | null>(null);
-  const onWatchCompleteRef = useRef<VideoCardProps["onWatchComplete"]>();
+  const onWatchCompleteRef = useRef<VideoCardProps["onWatchComplete"] | null>(
+    null
+  );
 
   // Scrubbing + thumbnail preview state
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
