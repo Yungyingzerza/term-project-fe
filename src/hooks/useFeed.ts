@@ -163,6 +163,25 @@ export function useFeed(opts: UseFeedOptions = {}): UseFeedResult {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [algo, enabled, limit, organizationId]);
 
+  useEffect(() => {
+    // When seeded data is provided (e.g., navigating to /feed/[postId]),
+    // sync it into local state and cancel any in-flight client fetches.
+    const usingSeedData =
+      !enabled ||
+      (seedItems.length > 0 ||
+        seedCursor != null ||
+        seedHasMore !== true ||
+        initialCursor != null);
+    if (!usingSeedData) return;
+
+    inFlight.current?.abort();
+    setLoading(false);
+    setError(null);
+    setItems(seedItems);
+    setNextCursor(seedCursor ?? initialCursor ?? null);
+    setHasMore(seedHasMore);
+  }, [enabled, seedItems, seedCursor, seedHasMore, initialCursor]);
+
   // Remove extra auto-fetch to avoid duplicate initial requests.
 
   // Cleanup in-flight on unmount
