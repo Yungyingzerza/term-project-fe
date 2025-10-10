@@ -183,7 +183,10 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
           </button>
         </div>
         {/* List */}
-        <div ref={scrollerRef} className="flex-1 px-3 py-2 overflow-y-auto space-y-3">
+        <div
+          ref={scrollerRef}
+          className="comments-scrollbar scroll-smoothbar flex-1 px-3 py-2 overflow-y-auto space-y-3"
+        >
           {items.map((comment) => (
             <CommentThread
               key={comment.id}
@@ -336,6 +339,10 @@ function CommentThread({
   const canToggleReplies = repliesCount > 0 || showReplies;
   const avatarSize = depth > 0 ? 28 : 32;
   const isActiveReplyTarget = activeReplyId === comment.id;
+  const MAX_INDENT_LEVEL = 4;
+  const indentLevel = Math.min(depth, MAX_INDENT_LEVEL);
+  const indentOffsetPx = depth > 0 ? indentLevel * 18 : 0;
+  const threadIndentStyle = depth > 0 ? ({ transform: `translateX(${indentOffsetPx}px)` } as const) : undefined;
 
   const ensureVisible = () => {
     const el = containerRef.current;
@@ -372,71 +379,83 @@ function CommentThread({
   };
 
   return (
-    <div ref={containerRef} className="flex items-start gap-2">
-      <Image
-        src={comment.user.avatar}
-        alt={`ภาพโปรไฟล์ของ ${comment.user.handle}`}
-        width={avatarSize}
-        height={avatarSize}
-        className={classNames(depth > 0 ? "w-7 h-7" : "w-8 h-8", "rounded-full border border-white/10")}
-        unoptimized
-      />
-      <div className="flex-1 min-w-0">
-        <CommentContent comment={comment} />
-        <div className="mt-1 flex items-center gap-3 text-xs text-white/60">
-          {isLoggedIn && (
-            <button
-              onClick={handleReplyClick}
-              className="hover:text-white transition-colors"
-            >
-              {isActiveReplyTarget ? "ยกเลิกการตอบกลับ" : "ตอบกลับ"}
-            </button>
+    <div ref={containerRef} className="relative" style={threadIndentStyle}>
+      {depth > 0 && (
+        <span
+          className="pointer-events-none absolute -left-3 top-3 bottom-0 w-px bg-white/15"
+          aria-hidden
+        />
+      )}
+      <div className="flex items-start gap-2">
+        <Image
+          src={comment.user.avatar}
+          alt={`ภาพโปรไฟล์ของ ${comment.user.handle}`}
+          width={avatarSize}
+          height={avatarSize}
+          className={classNames(depth > 0 ? "w-7 h-7" : "w-8 h-8", "rounded-full border border-white/10")}
+          unoptimized
+        />
+        <div className="flex-1 min-w-0">
+          <CommentContent comment={comment} />
+          <div className="mt-1 flex items-center gap-3 text-xs text-white/60">
+            {isLoggedIn && (
+              <button
+                onClick={handleReplyClick}
+                className="hover:text-white transition-colors"
+              >
+                {isActiveReplyTarget ? "ยกเลิกการตอบกลับ" : "ตอบกลับ"}
+              </button>
+            )}
+            {canToggleReplies && (
+              <button
+                onClick={() => setShowReplies((prev) => !prev)}
+                className="hover:text-white transition-colors"
+              >
+                {showReplies ? "ซ่อนการตอบกลับ" : `ดูการตอบกลับ (${repliesCount})`}
+              </button>
+            )}
+          </div>
+          {isActiveReplyTarget && (
+            <div className="mt-1 text-xs text-white/60">กำลังตอบกลับผ่านช่องด้านล่าง</div>
           )}
-          {canToggleReplies && (
-            <button
-              onClick={() => setShowReplies((prev) => !prev)}
-              className="hover:text-white transition-colors"
-            >
-              {showReplies ? "ซ่อนการตอบกลับ" : `ดูการตอบกลับ (${repliesCount})`}
-            </button>
+          {showReplies && (
+            <div className="relative mt-3 space-y-3">
+              <span
+                className="pointer-events-none absolute -left-3 top-0 bottom-0 w-px bg-white/15"
+                aria-hidden
+              />
+              {replies.map((reply) => (
+                <CommentThread
+                  key={reply.id}
+                  comment={reply}
+                  postId={postId}
+                  isLoggedIn={isLoggedIn}
+                  depth={depth + 1}
+                  onReplyIntent={onReplyIntent}
+                  onReplyCancel={onReplyCancel}
+                  activeReplyId={activeReplyId}
+                />
+              ))}
+              {!loading && replies.length === 0 && repliesCount === 0 && (
+                <div className="text-xs text-white/60">ยังไม่มีการตอบกลับ</div>
+              )}
+              {hasMore ? (
+                <button
+                  onClick={() => fetchNext()}
+                  disabled={loading}
+                  className="text-xs px-3 py-1.5 rounded bg-white/10 hover:bg-white/15 disabled:opacity-60 text-white"
+                >
+                  {loading ? "กำลังโหลด..." : "โหลดการตอบกลับเพิ่มเติม"}
+                </button>
+              ) : (
+                replies.length > 0 && (
+                  <div className="text-xs text-white/60">ไม่มีการตอบกลับเพิ่มเติม</div>
+                )
+              )}
+              <div ref={repliesEndRef} />
+            </div>
           )}
         </div>
-        {isActiveReplyTarget && (
-          <div className="mt-1 text-xs text-white/60">กำลังตอบกลับผ่านช่องด้านล่าง</div>
-        )}
-        {showReplies && (
-          <div className="mt-3 space-y-3 border-l border-white/10 pl-3">
-            {replies.map((reply) => (
-              <CommentThread
-                key={reply.id}
-                comment={reply}
-                postId={postId}
-                isLoggedIn={isLoggedIn}
-                depth={depth + 1}
-                onReplyIntent={onReplyIntent}
-                onReplyCancel={onReplyCancel}
-                activeReplyId={activeReplyId}
-              />
-            ))}
-            {!loading && replies.length === 0 && repliesCount === 0 && (
-              <div className="text-xs text-white/60">ยังไม่มีการตอบกลับ</div>
-            )}
-            {hasMore ? (
-              <button
-                onClick={() => fetchNext()}
-                disabled={loading}
-                className="text-xs px-3 py-1.5 rounded bg-white/10 hover:bg-white/15 disabled:opacity-60 text-white"
-              >
-                {loading ? "กำลังโหลด..." : "โหลดการตอบกลับเพิ่มเติม"}
-              </button>
-            ) : (
-              replies.length > 0 && (
-                <div className="text-xs text-white/60">ไม่มีการตอบกลับเพิ่มเติม</div>
-              )
-            )}
-            <div ref={repliesEndRef} />
-          </div>
-        )}
       </div>
     </div>
   );

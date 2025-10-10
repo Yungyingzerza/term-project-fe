@@ -59,3 +59,28 @@ body {
 .scroll-smoothbar::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+.comments-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.45) rgba(255, 255, 255, 0.08);
+  scrollbar-gutter: stable both-edges;
+}
+.comments-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.comments-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 9999px;
+}
+.comments-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.35);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+  transition: background-color 150ms ease, box-shadow 150ms ease;
+}
+.comments-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.65);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
