@@ -14,6 +14,8 @@ export interface CommentItem {
   visibility: CommentVisibility;
   parentCommentId: string | null;
   user: CommentUser;
+  /** Only present for top-level comments. */
+  repliesCount?: number;
   createdAt: string; // ISO timestamp
 }
 
@@ -21,4 +23,3 @@ export interface CommentsPage {
   items: CommentItem[];
   paging: { hasMore: boolean; nextCursor: string | null };
 }
-

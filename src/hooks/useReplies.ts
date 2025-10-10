@@ -1,15 +1,16 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApi } from "./useApi";
-import type { CommentItem, CommentsPage, CommentVisibility } from "@/interfaces";
+import type { CommentItem, CommentsPage } from "@/interfaces";
 
-export interface UseCommentsOptions {
+export interface UseRepliesOptions {
   postId: string;
+  commentId: string;
   limit?: number;
   enabled?: boolean;
 }
 
-export interface UseCommentsResult {
+export interface UseRepliesResult {
   items: CommentItem[];
   loading: boolean;
   error: Error | null;
@@ -17,14 +18,16 @@ export interface UseCommentsResult {
   nextCursor: string | null;
   fetchNext: () => Promise<void>;
   refetch: () => Promise<void>;
-  addComment: (input: {
-    text: string;
-    parentCommentId?: string | null;
-    visibility?: CommentVisibility;
-  }) => Promise<CommentItem>;
+  addReply: (input: { text: string }) => Promise<CommentItem>;
+  appendReply: (reply: CommentItem) => void;
 }
 
-export function useComments({ postId, limit = 12, enabled = true }: UseCommentsOptions): UseCommentsResult {
+export function useReplies({
+  postId,
+  commentId,
+  limit = 10,
+  enabled = true,
+}: UseRepliesOptions): UseRepliesResult {
   const { json } = useApi();
   const [items, setItems] = useState<CommentItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -33,18 +36,29 @@ export function useComments({ postId, limit = 12, enabled = true }: UseCommentsO
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const inFlight = useRef<boolean>(false);
 
-  const normalize = useCallback(
-    (list: CommentItem[] = []) =>
-      list.map((item) => ({
-        ...item,
-        repliesCount: item.repliesCount ?? 0,
-      })),
+  const normalizeItem = useCallback(
+    (item: CommentItem) => ({
+      ...item,
+      repliesCount: item.repliesCount ?? 0,
+    }),
     []
+  );
+
+  const normalizeList = useCallback(
+    (list: CommentItem[] = []) => list.map((item) => normalizeItem(item)),
+    [normalizeItem]
+  );
+
+  const appendReply = useCallback(
+    (reply: CommentItem) => {
+      setItems((prev) => [...prev, normalizeItem(reply)]);
+    },
+    [normalizeItem]
   );
 
   const fetchPage = useCallback(
     async (mode: "reset" | "append") => {
-      if (inFlight.current) return;
+      if (inFlight.current || !enabled) return;
       inFlight.current = true;
       setLoading(true);
       setError(null);
@@ -53,10 +67,12 @@ export function useComments({ postId, limit = 12, enabled = true }: UseCommentsO
         params.set("limit", String(limit));
         const cursorToUse = mode === "reset" ? null : nextCursor;
         if (cursorToUse) params.set("cursor", cursorToUse);
-        const data = await json<CommentsPage>(`/feed/${postId}/comments?${params.toString()}`);
+        const data = await json<CommentsPage>(
+          `/feed/${postId}/comments/${commentId}/replies?${params.toString()}`
+        );
         setHasMore(!!data?.paging?.hasMore);
         setNextCursor(data?.paging?.nextCursor ?? null);
-        const normalizedItems = normalize(data?.items ?? []);
+        const normalizedItems = normalizeList(data?.items ?? []);
         setItems((prev) => (mode === "reset" ? normalizedItems : [...prev, ...normalizedItems]));
       } catch (err: unknown) {
         const normalizedError =
@@ -67,7 +83,7 @@ export function useComments({ postId, limit = 12, enabled = true }: UseCommentsO
         inFlight.current = false;
       }
     },
-    [json, postId, limit, nextCursor, normalize]
+    [commentId, enabled, json, limit, nextCursor, normalizeList, postId]
   );
 
   const refetch = useCallback(async () => fetchPage("reset"), [fetchPage]);
@@ -80,47 +96,21 @@ export function useComments({ postId, limit = 12, enabled = true }: UseCommentsO
     setItems([]);
     setNextCursor(null);
     setHasMore(true);
+    setError(null);
     if (enabled) void refetch();
-  }, [postId, limit, enabled, refetch]);
+  }, [commentId, enabled, limit, refetch]);
 
-  const addComment = useCallback(
-    async (
-      {
-        text,
-        parentCommentId = null,
-        visibility = "Public",
-      }: { text: string; parentCommentId?: string | null; visibility?: CommentVisibility }
-    ) => {
-      const endpoint = parentCommentId
-        ? `/feed/${postId}/comments/${parentCommentId}/replies`
-        : `/feed/${postId}/comments`;
-      const bodyPayload =
-        parentCommentId === null || parentCommentId === undefined
-          ? { text, parentCommentId, visibility }
-          : { text };
-      const created = await json<CommentItem>(endpoint, {
+  const addReply = useCallback(
+    async ({ text }: { text: string }) => {
+      const created = await json<CommentItem>(`/feed/${postId}/comments/${commentId}/replies`, {
         method: "POST",
-        body: JSON.stringify(bodyPayload),
+        body: JSON.stringify({ text }),
       });
-      const normalized = {
-        ...created,
-        repliesCount: created.repliesCount ?? 0,
-      };
-      // Append locally so UI reflects immediately
-      if (!parentCommentId) {
-        setItems((prev) => [...prev, normalized]);
-      } else {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === parentCommentId
-              ? { ...item, repliesCount: (item.repliesCount ?? 0) + 1 }
-              : item
-          )
-        );
-      }
+      const normalized = normalizeItem(created);
+      appendReply(normalized);
       return normalized;
     },
-    [json, postId]
+    [appendReply, commentId, json, normalizeItem, postId]
   );
 
   return useMemo(
@@ -132,8 +122,9 @@ export function useComments({ postId, limit = 12, enabled = true }: UseCommentsO
       nextCursor,
       fetchNext,
       refetch,
-      addComment,
+      addReply,
+      appendReply,
     }),
-    [items, loading, error, hasMore, nextCursor, fetchNext, refetch, addComment]
+    [items, loading, error, hasMore, nextCursor, fetchNext, refetch, addReply, appendReply]
   );
 }

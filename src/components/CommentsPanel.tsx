@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import type { CommentItem, CommentVisibility } from "@/interfaces";
-import { useComments } from "@/hooks/useComments";
+import { useComments, type UseCommentsResult } from "@/hooks/useComments";
+import { useReplies } from "@/hooks/useReplies";
 import { useAppSelector } from "@/store/hooks";
 
 export interface CommentsPanelProps {
@@ -130,27 +131,14 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
         </div>
         {/* List */}
         <div ref={scrollerRef} className="px-3 py-2 h-[55vh] sm:h-[calc(100%-98px)] overflow-y-auto space-y-3">
-          {items.map((c) => (
-            <div key={c.id} className="flex items-start gap-2">
-              <Image
-                src={c.user.avatar}
-                alt={`ภาพโปรไฟล์ของ ${c.user.handle}`}
-                width={32}
-                height={32}
-                className="w-8 h-8 rounded-full border border-white/10"
-                unoptimized
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-semibold truncate max-w-[10rem] text-white">{c.user.handle}</span>
-                  <span className="text-white/50 text-xs">{timeAgo(c.createdAt)}</span>
-                  {c.visibility === "OwnerOnly" && (
-                    <span className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/80">เจ้าของ</span>
-                  )}
-                </div>
-                <div className="text-sm whitespace-pre-wrap break-words text-white">{c.text}</div>
-              </div>
-            </div>
+          {items.map((comment) => (
+            <CommentThread
+              key={comment.id}
+              comment={comment}
+              postId={postId}
+              addComment={addComment}
+              isLoggedIn={isLoggedIn}
+            />
           ))}
           <div className="py-2">
             {hasMore ? (
@@ -214,5 +202,169 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
       </div>
     </div>,
     document.body
+  );
+}
+
+interface CommentThreadProps {
+  comment: CommentItem;
+  postId: string;
+  addComment: UseCommentsResult["addComment"];
+  isLoggedIn: boolean;
+}
+
+function CommentContent({ comment }: { comment: CommentItem }) {
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="font-semibold truncate max-w-[10rem] text-white">{comment.user.handle}</span>
+        <span className="text-white/50 text-xs">{timeAgo(comment.createdAt)}</span>
+        {comment.visibility === "OwnerOnly" && (
+          <span className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-white/80">เจ้าของ</span>
+        )}
+      </div>
+      <div className="text-sm whitespace-pre-wrap break-words text-white">{comment.text}</div>
+    </div>
+  );
+}
+
+function CommentThread({ comment, postId, addComment, isLoggedIn }: CommentThreadProps) {
+  const [showReplies, setShowReplies] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const replyInputRef = useRef<HTMLInputElement | null>(null);
+  const replyPosting = useRef<boolean>(false);
+  const repliesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const { items: replies, loading, hasMore, fetchNext, appendReply } = useReplies({
+    postId,
+    commentId: comment.id,
+    enabled: showReplies,
+  });
+
+  useEffect(() => {
+    if (replyOpen) {
+      setShowReplies(true);
+      setTimeout(() => replyInputRef.current?.focus(), 60);
+    } else {
+      setReplyText("");
+    }
+  }, [replyOpen]);
+
+  const onSubmitReply = async () => {
+    const trimmed = replyText.trim();
+    if (!trimmed || replyPosting.current) return;
+    replyPosting.current = true;
+    try {
+      if (!showReplies) setShowReplies(true);
+      const created = await addComment({
+        text: trimmed,
+        parentCommentId: comment.id,
+      });
+      appendReply(created);
+      setReplyText("");
+      requestAnimationFrame(() => {
+        const endEl = repliesEndRef.current;
+        if (endEl) endEl.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      replyPosting.current = false;
+    }
+  };
+
+  const repliesCount = comment.repliesCount ?? 0;
+  const canToggleReplies = repliesCount > 0 || showReplies;
+
+  return (
+    <div className="flex items-start gap-2">
+      <Image
+        src={comment.user.avatar}
+        alt={`ภาพโปรไฟล์ของ ${comment.user.handle}`}
+        width={32}
+        height={32}
+        className="w-8 h-8 rounded-full border border-white/10"
+        unoptimized
+      />
+      <div className="flex-1 min-w-0">
+        <CommentContent comment={comment} />
+        <div className="mt-1 flex items-center gap-3 text-xs text-white/60">
+          {isLoggedIn && (
+            <button
+              onClick={() => setReplyOpen((prev) => !prev)}
+              className="hover:text-white transition-colors"
+            >
+              {replyOpen ? "ยกเลิกการตอบกลับ" : "ตอบกลับ"}
+            </button>
+          )}
+          {canToggleReplies && (
+            <button
+              onClick={() => setShowReplies((prev) => !prev)}
+              className="hover:text-white transition-colors"
+            >
+              {showReplies ? "ซ่อนการตอบกลับ" : `ดูการตอบกลับ (${repliesCount})`}
+            </button>
+          )}
+        </div>
+        {replyOpen && isLoggedIn && (
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              ref={replyInputRef}
+              value={replyText}
+              onChange={(e) => setReplyText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onSubmitReply();
+                }
+              }}
+              placeholder="ตอบกลับ..."
+              className="flex-1 text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
+            />
+            <button
+              onClick={onSubmitReply}
+              disabled={!replyText.trim()}
+              className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60"
+            >
+              ส่ง
+            </button>
+          </div>
+        )}
+        {showReplies && (
+          <div className="mt-3 space-y-3 border-l border-white/10 pl-3">
+            {replies.map((reply) => (
+              <div key={reply.id} className="flex items-start gap-2">
+                <Image
+                  src={reply.user.avatar}
+                  alt={`ภาพโปรไฟล์ของ ${reply.user.handle}`}
+                  width={28}
+                  height={28}
+                  className="w-7 h-7 rounded-full border border-white/10"
+                  unoptimized
+                />
+                <CommentContent comment={reply} />
+              </div>
+            ))}
+            {!loading && replies.length === 0 && repliesCount === 0 && (
+              <div className="text-xs text-white/60">ยังไม่มีการตอบกลับ</div>
+            )}
+            {hasMore ? (
+              <button
+                onClick={() => fetchNext()}
+                disabled={loading}
+                className="text-xs px-3 py-1.5 rounded bg-white/10 hover:bg-white/15 disabled:opacity-60 text-white"
+              >
+                {loading ? "กำลังโหลด..." : "โหลดการตอบกลับเพิ่มเติม"}
+              </button>
+            ) : (
+              replies.length > 0 && (
+                <div className="text-xs text-white/60">ไม่มีการตอบกลับเพิ่มเติม</div>
+              )
+            )}
+            <div ref={repliesEndRef} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
