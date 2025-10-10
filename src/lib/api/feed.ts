@@ -66,6 +66,22 @@ export interface GetOrganizationFeedParams {
   cookie?: string;
 }
 
+export interface RecordPostViewParams {
+  postId: string;
+  watchTimeSeconds: number;
+  signal?: AbortSignal;
+}
+
+export interface RecordPostViewResponse {
+  postId: string;
+  views: number;
+  viewer: {
+    viewed: boolean;
+    watchTime: number;
+  };
+  wasNewView: boolean;
+}
+
 export async function getFeed({ algo = "for-you", limit = 10, cursor, signal, cookie }: GetFeedParams = {}): Promise<FeedResponse> {
   const url = buildApiUrl("feed");
   url.searchParams.set("algo", algo);
@@ -177,5 +193,39 @@ export async function getFeedByOrganizationId({
   }
 
   const data = (await res.json()) as OrganizationFeedResponse;
+  return data;
+}
+
+export async function recordPostView({
+  postId,
+  watchTimeSeconds,
+  signal,
+}: RecordPostViewParams): Promise<RecordPostViewResponse> {
+  const url = buildApiUrl(`feed/${encodeURIComponent(postId)}/views`);
+  const payload = Number.isFinite(watchTimeSeconds)
+    ? Math.max(0, watchTimeSeconds)
+    : 0;
+
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ watchTimeSeconds: payload }),
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to record view for post ${postId}: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  const data = (await res.json()) as RecordPostViewResponse;
   return data;
 }

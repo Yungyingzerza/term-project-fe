@@ -25,6 +25,7 @@ export default function VideoCard({
   isActive = false,
   shouldPreload = false,
   preloadSeconds = 5,
+  onWatchComplete,
 }: VideoCardProps) {
   const dispatch = useAppDispatch();
   const globalMuted = useAppSelector((s) => !!s.player.muted);
@@ -47,6 +48,9 @@ export default function VideoCard({
   const progressInnerRef = useRef<HTMLDivElement | null>(null);
   const lastProgressRef = useRef<number>(0);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
+  const watchAccumulatorRef = useRef<number>(0);
+  const watchStartTimestampRef = useRef<number | null>(null);
+  const onWatchCompleteRef = useRef<VideoCardProps["onWatchComplete"]>();
 
   // Scrubbing + thumbnail preview state
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
@@ -86,6 +90,50 @@ export default function VideoCard({
   const followButtonClasses = isFollowing
     ? "ml-2 text-xs px-3 py-1 rounded-full border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20"
     : "ml-2 text-xs px-3 py-1 rounded-full bg-white text-black font-semibold hover:opacity-90";
+
+  useEffect(() => {
+    onWatchCompleteRef.current = onWatchComplete;
+  }, [onWatchComplete]);
+
+  const stopAccumulatingWatch = useCallback(() => {
+    if (watchStartTimestampRef.current == null) return;
+    const now =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
+    const elapsedMs = now - watchStartTimestampRef.current;
+    if (Number.isFinite(elapsedMs) && elapsedMs > 0) {
+      watchAccumulatorRef.current += elapsedMs / 1000;
+    }
+    watchStartTimestampRef.current = null;
+  }, []);
+
+  const startAccumulatingWatch = useCallback(() => {
+    if (!isActiveRef.current) return;
+    if (watchStartTimestampRef.current != null) return;
+    watchStartTimestampRef.current =
+      typeof performance !== "undefined" && typeof performance.now === "function"
+        ? performance.now()
+        : Date.now();
+  }, []);
+
+  const emitWatchTime = useCallback(() => {
+    stopAccumulatingWatch();
+    const seconds = watchAccumulatorRef.current;
+    watchAccumulatorRef.current = 0;
+    if (
+      !onWatchCompleteRef.current ||
+      !post?.id ||
+      !Number.isFinite(seconds) ||
+      seconds <= 0
+    ) {
+      return;
+    }
+    onWatchCompleteRef.current({
+      postId: post.id,
+      watchTimeSeconds: seconds,
+    });
+  }, [post.id, stopAccumulatingWatch]);
 
   const clearVolumeHideTimer = useCallback(() => {
     if (volumeHideTimerRef.current != null) {
@@ -300,6 +348,36 @@ export default function VideoCard({
   useEffect(() => {
     isActiveRef.current = isActive;
   }, [isActive]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => startAccumulatingWatch();
+    const handlePlaying = () => startAccumulatingWatch();
+    const handlePause = () => stopAccumulatingWatch();
+    const handleWaiting = () => stopAccumulatingWatch();
+    const handleEnded = () => stopAccumulatingWatch();
+
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("ended", handleEnded);
+
+    if (isActiveRef.current && !video.paused && !video.ended) {
+      startAccumulatingWatch();
+    }
+
+    return () => {
+      stopAccumulatingWatch();
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("ended", handleEnded);
+    };
+  }, [post.videoSrc, startAccumulatingWatch, stopAccumulatingWatch]);
 
   // Reset preload state when the source changes
   useEffect(() => {
@@ -746,16 +824,26 @@ export default function VideoCard({
   useEffect(() => {
     const wasActive = prevActiveRef.current;
     prevActiveRef.current = isActive;
-    // Reset time when leaving active state
+
     if (wasActive && !isActive) {
+      emitWatchTime();
       const v = videoRef.current;
       if (v) {
         try {
           v.currentTime = 0;
         } catch {}
       }
+      watchAccumulatorRef.current = 0;
+      watchStartTimestampRef.current = null;
+    } else if (!wasActive && isActive) {
+      watchAccumulatorRef.current = 0;
+      watchStartTimestampRef.current = null;
+      const v = videoRef.current;
+      if (v && !v.paused && !v.ended) {
+        startAccumulatingWatch();
+      }
     }
-    // Fully unload when not active and not marked for preload
+
     if (!isActive && !shouldPreload) {
       const v = videoRef.current;
       const bg = bgVideoRef.current;
@@ -769,7 +857,7 @@ export default function VideoCard({
       } catch {}
       setUsePosterBg(true);
     }
-  }, [isActive, shouldPreload]);
+  }, [emitWatchTime, isActive, shouldPreload, startAccumulatingWatch]);
 
   // Note: preloading handled via props; unload handled above when not active and not preloading
 
@@ -832,6 +920,15 @@ export default function VideoCard({
       v.removeEventListener("timeupdate", onTime);
     };
   }, [shouldPreload, isActive, preloadSeconds, post.videoSrc]);
+
+  useEffect(() => {
+    return () => {
+      stopAccumulatingWatch();
+      if (prevActiveRef.current) {
+        emitWatchTime();
+      }
+    };
+  }, [emitWatchTime, stopAccumulatingWatch]);
 
   // Ambient color sampler (YouTube-like)
   useEffect(() => {

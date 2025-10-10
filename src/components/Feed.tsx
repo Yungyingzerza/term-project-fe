@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 import VideoCard from "./VideoCard";
 import { useFeed } from "@/hooks/useFeed";
 import type { FeedAlgo } from "@/hooks/useFeed";
-import type { PostItem } from "@/interfaces";
+import type { PostItem, VideoWatchCompletePayload } from "@/interfaces";
+import { recordPostView } from "@/lib/api/feed";
 
 interface FeedProps {
   seedItems?: PostItem[];
@@ -21,6 +22,8 @@ interface FeedProps {
 const PRELOAD_BEHIND = 0; // e.g., 1 also preloads the previous video
 // How many seconds to warm buffer for each preloaded video (approximate)
 const PRELOAD_SECONDS = 3;
+const WATCH_EPSILON = 0.09;
+const WATCH_MAX_SECONDS = 24 * 60 * 60;
 
 type WindowWithCSS = Window & {
   CSS?: {
@@ -64,6 +67,64 @@ export default function Feed({
   const [PRELOAD_AHEAD, setPRELOAD_AHEAD] = useState<number>(0);
   const prefetchIndexRef = useRef<number | null>(null);
   const scrollStopTimerRef = useRef<number | null>(null);
+  const watchTotalsRef = useRef<Map<string, number>>(new Map());
+  const lastSentWatchRef = useRef<Map<string, number>>(new Map());
+  const activePostIdRef = useRef<string | null>(null);
+
+  const handleWatchComplete = useCallback(
+    ({ postId, watchTimeSeconds }: VideoWatchCompletePayload) => {
+      if (!postId) return;
+      const increment = Number.isFinite(watchTimeSeconds)
+        ? Math.max(0, watchTimeSeconds)
+        : 0;
+      if (increment <= 0) return;
+
+      const prevTotal = watchTotalsRef.current.get(postId) ?? 0;
+      const nextTotal = Math.min(prevTotal + increment, WATCH_MAX_SECONDS);
+      watchTotalsRef.current.set(postId, nextTotal);
+
+      const lastSent = lastSentWatchRef.current.get(postId) ?? 0;
+      if (nextTotal <= lastSent + WATCH_EPSILON) {
+        return;
+      }
+      lastSentWatchRef.current.set(postId, nextTotal);
+
+      const roundedSeconds = Math.round(nextTotal * 10) / 10;
+      void recordPostView({ postId, watchTimeSeconds: roundedSeconds }).catch(
+        (error: unknown) => {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("Failed to record post view", { postId, error });
+          }
+        }
+      );
+    },
+    []
+  );
+
+  const handleVideoEntered = useCallback(
+    (postId: string) => {
+      if (!postId) return;
+      const currentTotal = watchTotalsRef.current.get(postId) ?? 0;
+      const roundedSeconds = Math.round(currentTotal * 10) / 10;
+      watchTotalsRef.current.set(postId, currentTotal);
+      lastSentWatchRef.current.set(
+        postId,
+        Math.max(lastSentWatchRef.current.get(postId) ?? 0, roundedSeconds)
+      );
+
+      void recordPostView({ postId, watchTimeSeconds: roundedSeconds }).catch(
+        (error: unknown) => {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("Failed to record post view on enter", {
+              postId,
+              error,
+            });
+          }
+        }
+      );
+    },
+    []
+  );
 
   // Keep hook algo in sync with route changes
   useEffect(() => {
@@ -300,6 +361,18 @@ export default function Feed({
     }
   }, [items.length, index]);
 
+  useEffect(() => {
+    const activePost = items[index];
+    const activeId = activePost?.id ?? null;
+    if (!activeId) {
+      activePostIdRef.current = null;
+      return;
+    }
+    if (activePostIdRef.current === activeId) return;
+    activePostIdRef.current = activeId;
+    handleVideoEntered(activeId);
+  }, [handleVideoEntered, index, items]);
+
   return (
     <main
       ref={containerRef}
@@ -342,6 +415,7 @@ export default function Feed({
                   isActive={i === index}
                   shouldPreload={shouldPreload}
                   preloadSeconds={PRELOAD_SECONDS}
+                  onWatchComplete={handleWatchComplete}
                 />
               ) : null;
             })()}
