@@ -1,10 +1,10 @@
 "use client";
 import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import type { CommentItem, CommentVisibility } from "@/interfaces";
-import { useComments, type UseCommentsResult } from "@/hooks/useComments";
+import { useComments } from "@/hooks/useComments";
 import { useReplies } from "@/hooks/useReplies";
 import { useAppSelector } from "@/store/hooks";
 
@@ -37,16 +37,52 @@ function timeAgo(iso: string): string {
   }
 }
 
+interface ReplyIntentPayload {
+  comment: CommentItem;
+  depth: number;
+  appendReply: (reply: CommentItem) => void;
+  incrementReplyCount: () => void;
+  ensureVisible?: () => void;
+  scrollRepliesToEnd?: () => void;
+}
+
 export default function CommentsPanel({ postId, open, onClose, onAdded }: CommentsPanelProps) {
   const { items, loading, hasMore, fetchNext, addComment } = useComments({ postId, limit: 12, enabled: open });
   const [text, setText] = useState("");
   const [visibility, setVisibility] = useState<CommentVisibility>("Public");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
   const postingRef = useRef<boolean>(false);
+  const commentDraftRef = useRef<string>("");
+  const [replyTarget, setReplyTarget] = useState<ReplyIntentPayload | null>(null);
   const [mounted, setMounted] = useState(false);
   const user = useAppSelector((s) => s.user);
   const isLoggedIn = !!(user?.id || user?.username);
+  const handleReplyIntent = useCallback(
+    (payload: ReplyIntentPayload) => {
+      if (!replyTarget) {
+        commentDraftRef.current = text;
+      }
+      setText("");
+      setReplyTarget(payload);
+      setTimeout(() => inputRef.current?.focus(), 50);
+      payload.ensureVisible?.();
+      requestAnimationFrame(() => {
+        composerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    },
+    [replyTarget, text]
+  );
+  const handleReplyCancel = useCallback(() => {
+    setReplyTarget(null);
+    setText(commentDraftRef.current);
+    commentDraftRef.current = "";
+    setTimeout(() => inputRef.current?.focus(), 50);
+    requestAnimationFrame(() => {
+      composerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
+  }, []);
 
   // Focus input when opening
   useEffect(() => {
@@ -55,6 +91,8 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
     } else {
       setText("");
       setVisibility("Public");
+      setReplyTarget(null);
+      commentDraftRef.current = "";
     }
   }, [open]);
 
@@ -73,14 +111,27 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
     if (!trimmed || postingRef.current) return;
     postingRef.current = true;
     try {
-      const created = await addComment({ text: trimmed, visibility });
-      onAdded?.(created);
-      setText("");
-      // Scroll to bottom to reveal the new comment
-      requestAnimationFrame(() => {
-        const s = scrollerRef.current;
-        if (s) s.scrollTop = s.scrollHeight;
+      const created = await addComment({
+        text: trimmed,
+        visibility,
+        parentCommentId: replyTarget?.comment.id,
       });
+      if (replyTarget) {
+        replyTarget.appendReply(created);
+        replyTarget.incrementReplyCount();
+        requestAnimationFrame(() => {
+          replyTarget.scrollRepliesToEnd?.();
+        });
+      } else {
+        onAdded?.(created);
+        commentDraftRef.current = "";
+        // Scroll to bottom to reveal the new comment
+        requestAnimationFrame(() => {
+          const s = scrollerRef.current;
+          if (s) s.scrollTop = s.scrollHeight;
+        });
+      }
+      setText("");
     } catch (e) {
       console.error(e);
     } finally {
@@ -112,9 +163,11 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
         className={classNames(
           "absolute right-0 bottom-0 sm:top-0 sm:bottom-0 w-full sm:w-[380px] bg-black/55 border border-white/10 backdrop-blur-md shadow-xl text-white",
           "rounded-t-2xl sm:rounded-2xl",
+          "flex flex-col overflow-hidden",
           "transition-transform",
           open ? "translate-y-0" : "translate-y-full sm:translate-y-0 sm:translate-x-full"
         )}
+        style={{ maxHeight: "min(100svh, 100vh)" }}
         role="dialog"
         aria-label="ความคิดเห็น"
       >
@@ -130,14 +183,16 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
           </button>
         </div>
         {/* List */}
-        <div ref={scrollerRef} className="px-3 py-2 h-[55vh] sm:h-[calc(100%-98px)] overflow-y-auto space-y-3">
+        <div ref={scrollerRef} className="flex-1 px-3 py-2 overflow-y-auto space-y-3">
           {items.map((comment) => (
             <CommentThread
               key={comment.id}
               comment={comment}
               postId={postId}
-              addComment={addComment}
               isLoggedIn={isLoggedIn}
+              onReplyIntent={handleReplyIntent}
+              onReplyCancel={handleReplyCancel}
+              activeReplyId={replyTarget?.comment.id ?? null}
             />
           ))}
           <div className="py-2">
@@ -157,35 +212,59 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
         {/* Composer */}
         <div className="px-3 pb-3 pt-2 border-t border-white/10">
           {isLoggedIn ? (
-            <div className="flex items-center gap-2">
-              <select
-                value={visibility}
-                onChange={(e) => setVisibility(e.target.value as CommentVisibility)}
-                className="text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:bg-black/60 text-white"
-              >
-                <option value="Public">สาธารณะ</option>
-                <option value="OwnerOnly">เฉพาะเจ้าของ</option>
-              </select>
-              <input
-                ref={inputRef}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    onSubmit();
-                  }
-                }}
-                placeholder="เขียนความคิดเห็น..."
-                className="flex-1 text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
-              />
-              <button
-                onClick={onSubmit}
-                disabled={!text.trim()}
-                className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60"
-              >
-                ส่ง
-              </button>
+            <div ref={composerRef} className="space-y-2">
+              {replyTarget && (
+                <div className="flex items-start justify-between gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white">
+                      กำลังตอบกลับ {replyTarget.comment.user.handle}
+                    </div>
+                    <div className="mt-0.5 text-xs text-white/70 whitespace-pre-wrap break-words max-h-16 overflow-hidden">
+                      {replyTarget.comment.text || "ไม่มีข้อความ"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleReplyCancel}
+                    className="text-xs text-white/70 hover:text-white transition-colors"
+                  >
+                    ยกเลิก
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                {!replyTarget && (
+                  <select
+                    value={visibility}
+                    onChange={(e) => setVisibility(e.target.value as CommentVisibility)}
+                    className="text-xs px-2 py-1 rounded bg-black/40 border border-white/10 hover:bg-black/60 text-white"
+                  >
+                    <option value="Public">สาธารณะ</option>
+                    <option value="OwnerOnly">เฉพาะเจ้าของ</option>
+                  </select>
+                )}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
+                  <input
+                    ref={inputRef}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        onSubmit();
+                      }
+                    }}
+                    placeholder={replyTarget ? "ตอบกลับ..." : "เขียนความคิดเห็น..."}
+                    className="flex-1 min-w-0 w-full text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
+                  />
+                  <button
+                    onClick={onSubmit}
+                    disabled={!text.trim()}
+                    className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60 w-full sm:w-auto"
+                  >
+                    {replyTarget ? "ตอบกลับ" : "ส่ง"}
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-between gap-2">
@@ -208,8 +287,11 @@ export default function CommentsPanel({ postId, open, onClose, onAdded }: Commen
 interface CommentThreadProps {
   comment: CommentItem;
   postId: string;
-  addComment: UseCommentsResult["addComment"];
   isLoggedIn: boolean;
+  depth?: number;
+  onReplyIntent?: (payload: ReplyIntentPayload) => void;
+  onReplyCancel?: () => void;
+  activeReplyId?: string | null;
 }
 
 function CommentContent({ comment }: { comment: CommentItem }) {
@@ -227,13 +309,19 @@ function CommentContent({ comment }: { comment: CommentItem }) {
   );
 }
 
-function CommentThread({ comment, postId, addComment, isLoggedIn }: CommentThreadProps) {
+function CommentThread({
+  comment,
+  postId,
+  isLoggedIn,
+  depth = 0,
+  onReplyIntent,
+  onReplyCancel,
+  activeReplyId,
+}: CommentThreadProps) {
   const [showReplies, setShowReplies] = useState(false);
-  const [replyOpen, setReplyOpen] = useState(false);
-  const [replyText, setReplyText] = useState("");
-  const replyInputRef = useRef<HTMLInputElement | null>(null);
-  const replyPosting = useRef<boolean>(false);
   const repliesEndRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [repliesCount, setRepliesCount] = useState<number>(comment.repliesCount ?? 0);
 
   const { items: replies, loading, hasMore, fetchNext, appendReply } = useReplies({
     postId,
@@ -242,48 +330,55 @@ function CommentThread({ comment, postId, addComment, isLoggedIn }: CommentThrea
   });
 
   useEffect(() => {
-    if (replyOpen) {
-      setShowReplies(true);
-      setTimeout(() => replyInputRef.current?.focus(), 60);
-    } else {
-      setReplyText("");
-    }
-  }, [replyOpen]);
+    setRepliesCount(comment.repliesCount ?? 0);
+  }, [comment.repliesCount]);
 
-  const onSubmitReply = async () => {
-    const trimmed = replyText.trim();
-    if (!trimmed || replyPosting.current) return;
-    replyPosting.current = true;
-    try {
-      if (!showReplies) setShowReplies(true);
-      const created = await addComment({
-        text: trimmed,
-        parentCommentId: comment.id,
-      });
-      appendReply(created);
-      setReplyText("");
-      requestAnimationFrame(() => {
-        const endEl = repliesEndRef.current;
-        if (endEl) endEl.scrollIntoView({ behavior: "smooth", block: "end" });
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      replyPosting.current = false;
+  const canToggleReplies = repliesCount > 0 || showReplies;
+  const avatarSize = depth > 0 ? 28 : 32;
+  const isActiveReplyTarget = activeReplyId === comment.id;
+
+  const ensureVisible = () => {
+    const el = containerRef.current;
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   };
 
-  const repliesCount = comment.repliesCount ?? 0;
-  const canToggleReplies = repliesCount > 0 || showReplies;
+  const scrollRepliesToEnd = () => {
+    const endEl = repliesEndRef.current;
+    if (endEl) {
+      endEl.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  };
+
+  const handleReplyClick = () => {
+    if (!isLoggedIn) return;
+    if (isActiveReplyTarget) {
+      onReplyCancel?.();
+      return;
+    }
+    setShowReplies(true);
+    onReplyIntent?.({
+      comment,
+      depth,
+      appendReply: (reply) => {
+        setShowReplies(true);
+        appendReply(reply);
+      },
+      incrementReplyCount: () => setRepliesCount((prev) => prev + 1),
+      ensureVisible,
+      scrollRepliesToEnd,
+    });
+  };
 
   return (
-    <div className="flex items-start gap-2">
+    <div ref={containerRef} className="flex items-start gap-2">
       <Image
         src={comment.user.avatar}
         alt={`ภาพโปรไฟล์ของ ${comment.user.handle}`}
-        width={32}
-        height={32}
-        className="w-8 h-8 rounded-full border border-white/10"
+        width={avatarSize}
+        height={avatarSize}
+        className={classNames(depth > 0 ? "w-7 h-7" : "w-8 h-8", "rounded-full border border-white/10")}
         unoptimized
       />
       <div className="flex-1 min-w-0">
@@ -291,10 +386,10 @@ function CommentThread({ comment, postId, addComment, isLoggedIn }: CommentThrea
         <div className="mt-1 flex items-center gap-3 text-xs text-white/60">
           {isLoggedIn && (
             <button
-              onClick={() => setReplyOpen((prev) => !prev)}
+              onClick={handleReplyClick}
               className="hover:text-white transition-colors"
             >
-              {replyOpen ? "ยกเลิกการตอบกลับ" : "ตอบกลับ"}
+              {isActiveReplyTarget ? "ยกเลิกการตอบกลับ" : "ตอบกลับ"}
             </button>
           )}
           {canToggleReplies && (
@@ -306,44 +401,22 @@ function CommentThread({ comment, postId, addComment, isLoggedIn }: CommentThrea
             </button>
           )}
         </div>
-        {replyOpen && isLoggedIn && (
-          <div className="mt-2 flex items-center gap-2">
-            <input
-              ref={replyInputRef}
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  onSubmitReply();
-                }
-              }}
-              placeholder="ตอบกลับ..."
-              className="flex-1 text-sm px-3 py-2 rounded bg-black/40 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/30 text-white placeholder:text-white/50"
-            />
-            <button
-              onClick={onSubmitReply}
-              disabled={!replyText.trim()}
-              className="text-sm px-3 py-2 rounded bg-white text-black font-semibold hover:opacity-90 disabled:opacity-60"
-            >
-              ส่ง
-            </button>
-          </div>
+        {isActiveReplyTarget && (
+          <div className="mt-1 text-xs text-white/60">กำลังตอบกลับผ่านช่องด้านล่าง</div>
         )}
         {showReplies && (
           <div className="mt-3 space-y-3 border-l border-white/10 pl-3">
             {replies.map((reply) => (
-              <div key={reply.id} className="flex items-start gap-2">
-                <Image
-                  src={reply.user.avatar}
-                  alt={`ภาพโปรไฟล์ของ ${reply.user.handle}`}
-                  width={28}
-                  height={28}
-                  className="w-7 h-7 rounded-full border border-white/10"
-                  unoptimized
-                />
-                <CommentContent comment={reply} />
-              </div>
+              <CommentThread
+                key={reply.id}
+                comment={reply}
+                postId={postId}
+                isLoggedIn={isLoggedIn}
+                depth={depth + 1}
+                onReplyIntent={onReplyIntent}
+                onReplyCancel={onReplyCancel}
+                activeReplyId={activeReplyId}
+              />
             ))}
             {!loading && replies.length === 0 && repliesCount === 0 && (
               <div className="text-xs text-white/60">ยังไม่มีการตอบกลับ</div>
