@@ -1,5 +1,11 @@
 "use client";
-import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
 import { usePathname } from "next/navigation";
 import VideoCard from "./VideoCard";
 import { useFeed } from "@/hooks/useFeed";
@@ -101,30 +107,27 @@ export default function Feed({
     []
   );
 
-  const handleVideoEntered = useCallback(
-    (postId: string) => {
-      if (!postId) return;
-      const currentTotal = watchTotalsRef.current.get(postId) ?? 0;
-      const roundedSeconds = Math.round(currentTotal * 10) / 10;
-      watchTotalsRef.current.set(postId, currentTotal);
-      lastSentWatchRef.current.set(
-        postId,
-        Math.max(lastSentWatchRef.current.get(postId) ?? 0, roundedSeconds)
-      );
+  const handleVideoEntered = useCallback((postId: string) => {
+    if (!postId) return;
+    const currentTotal = watchTotalsRef.current.get(postId) ?? 0;
+    const roundedSeconds = Math.round(currentTotal * 10) / 10;
+    watchTotalsRef.current.set(postId, currentTotal);
+    lastSentWatchRef.current.set(
+      postId,
+      Math.max(lastSentWatchRef.current.get(postId) ?? 0, roundedSeconds)
+    );
 
-      void recordPostView({ postId, watchTimeSeconds: roundedSeconds }).catch(
-        (error: unknown) => {
-          if (process.env.NODE_ENV !== "production") {
-            console.warn("Failed to record post view on enter", {
-              postId,
-              error,
-            });
-          }
+    void recordPostView({ postId, watchTimeSeconds: roundedSeconds }).catch(
+      (error: unknown) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Failed to record post view on enter", {
+            postId,
+            error,
+          });
         }
-      );
-    },
-    []
-  );
+      }
+    );
+  }, []);
 
   // Keep hook algo in sync with route changes
   useEffect(() => {
@@ -377,14 +380,14 @@ export default function Feed({
     <main
       ref={containerRef}
       tabIndex={0}
-      className="flex-1 overflow-y-auto no-scrollbar overscroll-none [scroll-snap-type:y_mandatory] [--feed-top:56px]"
+      className="flex-1 overflow-y-auto no-scrollbar overscroll-none [scroll-snap-type:y_mandatory] [--feed-top:0px] md:[--feed-top:56px]"
       style={{
         height:
           "calc(var(--app-vh, 100dvh) - var(--feed-top, 56px) - var(--bottom-tabs-h, 0px))",
         WebkitOverflowScrolling: "touch",
       }}
     >
-      <div className="mx-auto w-full max-w-[700px] sm:px-3">
+      <div className="mx-auto w-full max-w-[700px] sm:px-3 md:px-3">
         {items.map((p, i) => (
           <div
             key={`${p.id}-${i}`}
@@ -393,9 +396,8 @@ export default function Feed({
               // Reduce paint costs for offscreen slides
               contain: "layout paint size style",
               contentVisibility: "auto",
-              scrollSnapAlign: "start",
             }}
-            className="[scroll-snap-stop:always]"
+            className="[scroll-snap-align:start] [scroll-snap-stop:always]"
             data-index={i}
             ref={(el) => {
               slideElsRef.current[i] = el;
@@ -438,7 +440,7 @@ export default function Feed({
                   </button>
                 </div>
               ) : (
-            <p>{loading ? "กำลังโหลด…" : "ยังไม่มีโพสต์"}</p>
+                <p>{loading ? "กำลังโหลด…" : "ยังไม่มีโพสต์"}</p>
               )}
             </div>
           </div>

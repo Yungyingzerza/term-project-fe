@@ -26,7 +26,7 @@ export default function ChillChill({
 }: ChillChillProps = {}) {
   const ambientColor = useAppSelector((s) => s.player.ambientColor);
   return (
-    <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+    <div className="relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none md:pt-14">
       {/* Ambient overlay (YouTube-like). Uses a radial mask so background-color can transition smoothly */}
       <div
         aria-hidden
@@ -37,7 +37,10 @@ export default function ChillChill({
           filter: "blur(60px)",
         }}
       />
-      <TopBar />
+      {/* TopBar is hidden on mobile (< md) since we have BottomTabs */}
+      <div className="hidden md:block">
+        <TopBar />
+      </div>
       <div className="relative z-10 flex">
         <Sidebar />
         <Feed
