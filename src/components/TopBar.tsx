@@ -3,7 +3,7 @@ import { Search, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { setAmbientColor } from "@/store/playerSlice";
-import { useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 
 export default function TopBar() {
@@ -12,13 +12,29 @@ export default function TopBar() {
   const user = useAppSelector((s) => s.user);
   const isLoggedIn = !!(user?.id || user?.username);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   //handle navigation
   const handleNavigation = (link: string) => {
     dispatch(setAmbientColor("transparent"));
 
     navigate.push(link);
+  };
+
+  // Handle search form submission
+  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+
+    // Navigate to explore page with search query
+    const encodedQuery = encodeURIComponent(trimmed);
+    handleNavigation(`/explore?q=${encodedQuery}`);
+    
+    // Clear the search input after navigation
+    setSearchQuery("");
   };
 
   // Close dropdown on outside click or Esc
@@ -31,6 +47,12 @@ export default function TopBar() {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMenuOpen(false);
+      
+      // Focus search input when "/" is pressed (unless already in an input)
+      if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
     };
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKey);
@@ -53,16 +75,19 @@ export default function TopBar() {
           <span className="hidden sm:inline">ชิลชิล</span>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
-          <div className="group relative">
+          <form onSubmit={handleSearchSubmit} className="group relative">
             <input
+              ref={searchInputRef}
               placeholder="ค้นหา"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white/5 border border-white/10 rounded-2xl pl-10 pr-12 py-2.5 outline-none focus:border-white/20"
             />
             <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
             <kbd className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] px-1.5 py-0.5 bg-white/10 rounded-md text-white/60">
               /
             </kbd>
-          </div>
+          </form>
         </div>
         <div className="flex items-center gap-2">
           {isLoggedIn ? (
