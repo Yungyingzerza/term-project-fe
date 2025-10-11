@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import TopBar from "./TopBar";
@@ -144,6 +144,9 @@ export default function ProfilePage({
   );
   const [historyLoading, setHistoryLoading] = useState(false);
 
+  // Ref for the content container to detect scroll
+  const contentContainerRef = useRef<HTMLElement>(null);
+
   useEffect(() => {
     setIsFollowing(Boolean(profile?.is_following));
     setFollowerCount(profile?.follower_count ?? 0);
@@ -257,6 +260,99 @@ export default function ProfilePage({
     }
   }, [historyCursor, historyLoading]);
 
+  // Infinite scroll effect - monitors window scroll
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      // Debounce scroll events
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        // Get scroll metrics from window
+        const scrollTop = window.scrollY;
+        const scrollHeight = document.documentElement.scrollHeight;
+        const clientHeight = window.innerHeight;
+
+        // Distance from bottom
+        const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+        // Debug logging
+        if (distanceFromBottom < 500) {
+          console.log("Near bottom! Active tab:", activeTab, {
+            distanceFromBottom,
+            videoHasMore,
+            videoLoading,
+            videoCursor,
+            reactedHasMore,
+            reactedLoading,
+            reactedCursor,
+            savedHasMore,
+            savedLoading,
+            savedCursor,
+            historyHasMore,
+            historyLoading,
+            historyCursor,
+          });
+        }
+
+        // Trigger when within 500px of bottom
+        if (distanceFromBottom < 500) {
+          switch (activeTab) {
+            case "videos":
+              if (videoHasMore && !videoLoading && videoCursor) {
+                console.log("Loading more videos...");
+                loadMoreVideos();
+              }
+              break;
+            case "reactions":
+              if (reactedHasMore && !reactedLoading && reactedCursor) {
+                console.log("Loading more reactions...");
+                loadMoreReactions();
+              }
+              break;
+            case "saves":
+              if (savedHasMore && !savedLoading && savedCursor) {
+                console.log("Loading more saves...");
+                loadMoreSaves();
+              }
+              break;
+            case "history":
+              if (historyHasMore && !historyLoading && historyCursor) {
+                console.log("Loading more history...");
+                loadMoreHistory();
+              }
+              break;
+          }
+        }
+      }, 100); // Debounce for 100ms
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [
+    activeTab,
+    videoHasMore,
+    videoLoading,
+    videoCursor,
+    reactedHasMore,
+    reactedLoading,
+    reactedCursor,
+    savedHasMore,
+    savedLoading,
+    savedCursor,
+    historyHasMore,
+    historyLoading,
+    historyCursor,
+    loadMoreVideos,
+    loadMoreReactions,
+    loadMoreSaves,
+    loadMoreHistory,
+  ]);
+
   const toMini = (p: PostItem): MiniPost => {
     return {
       id: p.id,
@@ -290,6 +386,11 @@ export default function ProfilePage({
       setActiveTab(visibleTabs[0]?.key ?? "videos");
     }
   }, [activeTab, visibleTabs]);
+
+  // Scroll to top when switching tabs
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [activeTab]);
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
@@ -349,20 +450,19 @@ export default function ProfilePage({
         </div>
         {videoHasMore && (
           <div className="mt-6 flex justify-center">
-            <button
-              onClick={loadMoreVideos}
-              disabled={videoLoading}
-              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {videoLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  กำลังโหลด...
-                </>
-              ) : (
-                "โหลดเพิ่มเติม"
-              )}
-            </button>
+            {videoLoading ? (
+              <div className="flex items-center gap-2 text-white/60">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>กำลังโหลดเพิ่มเติม...</span>
+              </div>
+            ) : (
+              <button
+                onClick={loadMoreVideos}
+                className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center gap-2 text-sm"
+              >
+                โหลดเพิ่มเติม
+              </button>
+            )}
           </div>
         )}
       </>
@@ -395,20 +495,19 @@ export default function ProfilePage({
         </div>
         {reactedHasMore && (
           <div className="mt-6 flex justify-center">
-            <button
-              onClick={loadMoreReactions}
-              disabled={reactedLoading}
-              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {reactedLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  กำลังโหลด...
-                </>
-              ) : (
-                "โหลดเพิ่มเติม"
-              )}
-            </button>
+            {reactedLoading ? (
+              <div className="flex items-center gap-2 text-white/60">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>กำลังโหลดเพิ่มเติม...</span>
+              </div>
+            ) : (
+              <button
+                onClick={loadMoreReactions}
+                className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center gap-2 text-sm"
+              >
+                โหลดเพิ่มเติม
+              </button>
+            )}
           </div>
         )}
       </>
@@ -438,20 +537,19 @@ export default function ProfilePage({
         </div>
         {savedHasMore && (
           <div className="mt-6 flex justify-center">
-            <button
-              onClick={loadMoreSaves}
-              disabled={savedLoading}
-              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {savedLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  กำลังโหลด...
-                </>
-              ) : (
-                "โหลดเพิ่มเติม"
-              )}
-            </button>
+            {savedLoading ? (
+              <div className="flex items-center gap-2 text-white/60">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>กำลังโหลดเพิ่มเติม...</span>
+              </div>
+            ) : (
+              <button
+                onClick={loadMoreSaves}
+                className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center gap-2 text-sm"
+              >
+                โหลดเพิ่มเติม
+              </button>
+            )}
           </div>
         )}
       </>
@@ -481,20 +579,19 @@ export default function ProfilePage({
         </div>
         {historyHasMore && (
           <div className="mt-6 flex justify-center">
-            <button
-              onClick={loadMoreHistory}
-              disabled={historyLoading}
-              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {historyLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  กำลังโหลด...
-                </>
-              ) : (
-                "โหลดเพิ่มเติม"
-              )}
-            </button>
+            {historyLoading ? (
+              <div className="flex items-center gap-2 text-white/60">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>กำลังโหลดเพิ่มเติม...</span>
+              </div>
+            ) : (
+              <button
+                onClick={loadMoreHistory}
+                className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition flex items-center gap-2 text-sm"
+              >
+                โหลดเพิ่มเติม
+              </button>
+            )}
           </div>
         )}
       </>
@@ -532,7 +629,7 @@ export default function ProfilePage({
       <div className="relative z-10 flex flex-1">
         <Sidebar />
 
-        <main className="flex-1">
+        <main ref={contentContainerRef} className="flex-1">
           <section className="max-w-7xl mx-auto px-4 py-6">
             {/* Header card - simplified to match ModernTok */}
             <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5 sm:p-6">
