@@ -87,7 +87,7 @@ export default function VideoCard({
   const authorProfileHref = normalizedHandle ? `/${normalizedHandle}` : null;
   const isFollowing = Boolean(isFollowingAuthor);
   const showFollowButton = Boolean(
-    authorUserId && (!currentUserId || authorUserId !== currentUserId)
+    authorUserId && currentUserId && authorUserId !== currentUserId
   );
   const followButtonClasses = isFollowing
     ? "ml-2 text-xs px-3 py-1 rounded-full border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20"
@@ -100,7 +100,8 @@ export default function VideoCard({
   const stopAccumulatingWatch = useCallback(() => {
     if (watchStartTimestampRef.current == null) return;
     const now =
-      typeof performance !== "undefined" && typeof performance.now === "function"
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
         ? performance.now()
         : Date.now();
     const elapsedMs = now - watchStartTimestampRef.current;
@@ -114,7 +115,8 @@ export default function VideoCard({
     if (!isActiveRef.current) return;
     if (watchStartTimestampRef.current != null) return;
     watchStartTimestampRef.current =
-      typeof performance !== "undefined" && typeof performance.now === "function"
+      typeof performance !== "undefined" &&
+      typeof performance.now === "function"
         ? performance.now()
         : Date.now();
   }, []);
@@ -183,7 +185,9 @@ export default function VideoCard({
       setIsFollowingAuthor(action === "follow");
     } catch (error: unknown) {
       setFollowError(
-        error instanceof Error ? error.message : "ไม่สามารถอัปเดตสถานะการติดตามได้"
+        error instanceof Error
+          ? error.message
+          : "ไม่สามารถอัปเดตสถานะการติดตามได้"
       );
     } finally {
       setFollowBusy(false);
