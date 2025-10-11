@@ -30,4 +30,6 @@ export interface PostItem {
   updatedAt?: string;
   /** Organization IDs the post is shared with (if provided by API). */
   orgViewIds?: string[];
+  /** Number of views for the post (if provided by API). */
+  views?: number;
 }

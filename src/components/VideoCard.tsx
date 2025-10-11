@@ -1,5 +1,13 @@
 "use client";
-import { MoreVertical, Pause, Play, Volume2, VolumeX } from "lucide-react";
+import {
+  Building2,
+  MoreVertical,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import Image from "next/image";
@@ -7,8 +15,8 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleMuted, setAmbientColor, setVolume } from "@/store/playerSlice";
 import ActionRail from "./ActionRail";
-import MusicTicker from "./MusicTicker";
-import type { VideoCardProps } from "@/interfaces";
+import type { Organization, VideoCardProps } from "@/interfaces";
+import { getOrganizationDetail } from "@/lib/api/organization";
 import { followUser, getUserIdByHandle, getUserProfile } from "@/lib/api/user";
 
 type VideoWithCapture = HTMLVideoElement & {
@@ -19,6 +27,7 @@ type VideoWithCapture = HTMLVideoElement & {
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
 
 const handleLookupCache = new Map<string, string | null>();
+const organizationDetailCache = new Map<string, Organization>();
 
 export default function VideoCard({
   post,
@@ -53,6 +62,7 @@ export default function VideoCard({
   const onWatchCompleteRef = useRef<VideoCardProps["onWatchComplete"] | null>(
     null
   );
+  const lastOrgIdsKeyRef = useRef<string>("");
 
   // Scrubbing + thumbnail preview state
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
@@ -84,6 +94,10 @@ export default function VideoCard({
   const [followBusy, setFollowBusy] = useState<boolean>(false);
   const [followError, setFollowError] = useState<string | null>(null);
   const [followLoaded, setFollowLoaded] = useState<boolean>(false);
+  const [orgDetails, setOrgDetails] = useState<Organization[]>([]);
+  const [orgLoading, setOrgLoading] = useState<boolean>(false);
+  const [orgError, setOrgError] = useState<string | null>(null);
+  const [orgPickerOpen, setOrgPickerOpen] = useState<boolean>(false);
   const authorProfileHref = normalizedHandle ? `/${normalizedHandle}` : null;
   const isFollowing = Boolean(isFollowingAuthor);
   const showFollowButton = Boolean(
@@ -92,6 +106,16 @@ export default function VideoCard({
   const followButtonClasses = isFollowing
     ? "ml-2 text-xs px-3 py-1 rounded-full border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20"
     : "ml-2 text-xs px-3 py-1 rounded-full bg-white text-black font-semibold hover:opacity-90";
+  const hasOrganizationVisibility = Array.isArray(post.orgViewIds)
+    ? post.orgViewIds.some(
+        (id) => typeof id === "string" && id.trim().length > 0
+      )
+    : false;
+  const primaryOrganization = orgDetails.length > 0 ? orgDetails[0] : null;
+  const extraOrganizationCount =
+    orgDetails.length > 1 ? orgDetails.length - 1 : 0;
+  const remainingOrganizations =
+    extraOrganizationCount > 0 ? orgDetails.slice(1) : [];
 
   useEffect(() => {
     onWatchCompleteRef.current = onWatchComplete;
@@ -165,6 +189,31 @@ export default function VideoCard({
     if (!authorProfileHref) return;
     router.push(authorProfileHref);
   }, [authorProfileHref, router]);
+  const handleNavigateToOrganization = useCallback(
+    (organizationId: string) => {
+      if (!organizationId) return;
+      router.push(`/organization/${organizationId}`);
+    },
+    [router]
+  );
+
+  const closeOrgPicker = useCallback(() => {
+    setOrgPickerOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!orgPickerOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeOrgPicker();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [orgPickerOpen, closeOrgPicker]);
   const handleFollowToggle = useCallback(async () => {
     if (
       !authorUserId ||
@@ -281,6 +330,109 @@ export default function VideoCard({
       ctrl.abort();
     };
   }, [currentUserId, normalizedHandle]);
+
+  useEffect(() => {
+    const rawIds = Array.isArray(post.orgViewIds) ? post.orgViewIds : [];
+    const uniqueIds = Array.from(
+      new Set(
+        rawIds.filter(
+          (id): id is string => typeof id === "string" && id.trim().length > 0
+        )
+      )
+    );
+
+    if (uniqueIds.length === 0) {
+      lastOrgIdsKeyRef.current = "";
+      setOrgDetails([]);
+      setOrgError(null);
+      setOrgLoading(false);
+      return;
+    }
+
+    if (!shouldLoad) {
+      setOrgLoading(false);
+      return;
+    }
+
+    const idsKey = uniqueIds.join("|");
+    if (idsKey === lastOrgIdsKeyRef.current) {
+      return;
+    }
+
+    const cached = uniqueIds
+      .map((id) => organizationDetailCache.get(id))
+      .filter((org): org is Organization => Boolean(org));
+
+    if (cached.length === uniqueIds.length) {
+      setOrgDetails(cached);
+      setOrgError(null);
+      setOrgLoading(false);
+      lastOrgIdsKeyRef.current = idsKey;
+      return;
+    }
+
+    let cancelled = false;
+    const ctrl = new AbortController();
+
+    const load = async () => {
+      setOrgLoading(true);
+      setOrgError(null);
+      try {
+        const results: Organization[] = [];
+        for (const id of uniqueIds) {
+          const cachedOrg = organizationDetailCache.get(id);
+          if (cachedOrg) {
+            results.push(cachedOrg);
+            continue;
+          }
+          const org = await getOrganizationDetail(id, { signal: ctrl.signal });
+          organizationDetailCache.set(id, org);
+          results.push(org);
+        }
+        if (cancelled) return;
+        setOrgDetails(results);
+        setOrgError(null);
+        lastOrgIdsKeyRef.current = idsKey;
+      } catch (error: unknown) {
+        if (cancelled) return;
+        const err = error as { name?: string; message?: string };
+        if (err?.name === "AbortError") return;
+        setOrgError(
+          error instanceof Error ? error.message : "ไม่สามารถดึงข้อมูลองค์กรได้"
+        );
+        console.error("[VideoCard] Failed to load organization details", error);
+        setOrgDetails([]);
+        lastOrgIdsKeyRef.current = "";
+      } finally {
+        if (!cancelled) {
+          setOrgLoading(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+      ctrl.abort();
+    };
+  }, [post.orgViewIds, shouldLoad]);
+
+  useEffect(() => {
+    if (!orgPickerOpen) return;
+    if (
+      orgDetails.length <= 1 ||
+      orgError ||
+      !hasOrganizationVisibility
+    ) {
+      setOrgPickerOpen(false);
+    }
+  }, [
+    hasOrganizationVisibility,
+    orgDetails.length,
+    orgError,
+    orgPickerOpen,
+  ]);
 
   const handleVolumeChange = useCallback(
     (value: number) => {
@@ -1231,7 +1383,130 @@ export default function VideoCard({
         viewerReaction={post.viewer?.reaction ?? null}
         viewerSaved={post.viewer?.saved ?? null}
       />
-      <MusicTicker text={post.music} />
+      {hasOrganizationVisibility ? (
+        <div className="pointer-events-none absolute left-2 sm:left-4 bottom-4 pr-20 z-30">
+          <div className="pointer-events-auto flex max-w-[78vw] sm:max-w-md items-center gap-2 rounded-full border border-white/12 bg-black/55 px-3 py-1.5 text-xs sm:text-sm backdrop-blur">
+            {orgLoading ? (
+              <span className="flex items-center gap-2 text-white/70">
+                <span className="inline-flex h-3 w-3 animate-spin rounded-full border-2 border-white/35 border-t-transparent" />
+                <span>กำลังโหลดองค์กร...</span>
+              </span>
+            ) : orgError ? (
+              <span className="text-red-300">โหลดข้อมูลองค์กรไม่สำเร็จ</span>
+            ) : primaryOrganization ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleNavigateToOrganization(primaryOrganization._id)
+                  }
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  title={primaryOrganization.name}
+                >
+                  <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/40">
+                    {primaryOrganization.logo_url ? (
+                      <Image
+                        src={primaryOrganization.logo_url}
+                        alt={`โลโก้องค์กร ${primaryOrganization.name}`}
+                        width={24}
+                        height={24}
+                        className="h-6 w-6 object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <Building2 className="h-4 w-4 text-white/75" />
+                    )}
+                  </span>
+                  <span className="max-w-[140px] truncate text-white">
+                    {primaryOrganization.name}
+                  </span>
+                </button>
+                {extraOrganizationCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setOrgPickerOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-white/80 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    aria-label={`ดูองค์กรอื่นอีก ${extraOrganizationCount} แห่ง`}
+                  >
+                    +{extraOrganizationCount}
+                  </button>
+                ) : null}
+              </>
+            ) : (
+              <span className="text-white/70">แชร์กับองค์กร</span>
+            )}
+          </div>
+        </div>
+      ) : null}
+      {orgPickerOpen && remainingOrganizations.length > 0 ? (
+        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div
+            className="pointer-events-auto absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeOrgPicker}
+            aria-hidden="true"
+          />
+          <div className="pointer-events-auto relative z-10 w-[88%] max-w-[360px] rounded-3xl border border-white/12 bg-black/75 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.65)]">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-white">
+                เลือกองค์กร
+              </h3>
+              <button
+                type="button"
+                onClick={closeOrgPicker}
+                className="rounded-full border border-white/10 bg-white/10 p-1 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                aria-label="ปิดรายการองค์กร"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+            </div>
+            <p className="mt-1 text-sm text-white/60">
+              เลือกองค์กรเพื่อเปิดดูฟีด
+            </p>
+            <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
+              {orgDetails.map((org) => (
+                <button
+                  key={org._id}
+                  type="button"
+                  onClick={() => {
+                    closeOrgPicker();
+                    handleNavigateToOrganization(org._id);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-black/40">
+                    {org.logo_url ? (
+                      <Image
+                        src={org.logo_url}
+                        alt={`โลโก้องค์กร ${org.name}`}
+                        width={40}
+                        height={40}
+                        className="h-10 w-10 object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <Building2 className="h-5 w-5 text-white/75" />
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {org.name}
+                    </p>
+                    {org.domains && org.domains.length > 0 ? (
+                      <p className="truncate text-xs text-white/50">
+                        {org.domains[0]}
+                        {org.domains.length > 1 ? " +" + (org.domains.length - 1) : ""}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="text-xs font-medium text-white/60">
+                    ดูฟีด
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Scrubbable progress bar + thumbnail preview */}
       <div

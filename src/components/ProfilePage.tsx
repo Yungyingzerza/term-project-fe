@@ -68,7 +68,10 @@ export default function ProfilePage({
     ? rawHandle.slice(1)
     : rawHandle;
   const avatar =
-    profileUser?.picture_url || author?.avatar || user?.picture_url || "https://i.pravatar.cc/100?img=1";
+    profileUser?.picture_url ||
+    author?.avatar ||
+    user?.picture_url ||
+    "https://i.pravatar.cc/100?img=1";
 
   const [isFollowing, setIsFollowing] = useState<boolean>(
     Boolean(profile?.is_following)
@@ -79,7 +82,8 @@ export default function ProfilePage({
   const [followingCount, setFollowingCount] = useState<number>(
     profile?.following_count ?? 0
   );
-  const postCount = profile?.post_count ?? (Array.isArray(items) ? items.length : 0);
+  const postCount =
+    profile?.post_count ?? (Array.isArray(items) ? items.length : 0);
   const [followError, setFollowError] = useState<string | null>(null);
   const [followBusy, setFollowBusy] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"videos" | "reactions" | "saves">(
@@ -90,7 +94,11 @@ export default function ProfilePage({
     setIsFollowing(Boolean(profile?.is_following));
     setFollowerCount(profile?.follower_count ?? 0);
     setFollowingCount(profile?.following_count ?? 0);
-  }, [profile?.follower_count, profile?.following_count, profile?.is_following]);
+  }, [
+    profile?.follower_count,
+    profile?.following_count,
+    profile?.is_following,
+  ]);
 
   const formatCount = (n: number): string => {
     if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -114,10 +122,14 @@ export default function ProfilePage({
         action,
       });
       setIsFollowing(action === "follow");
-      setFollowerCount((prev) => Math.max(0, prev + (action === "follow" ? 1 : -1)));
+      setFollowerCount((prev) =>
+        Math.max(0, prev + (action === "follow" ? 1 : -1))
+      );
     } catch (error: unknown) {
       setFollowError(
-        error instanceof Error ? error.message : "ไม่สามารถอัปเดตสถานะการติดตามได้"
+        error instanceof Error
+          ? error.message
+          : "ไม่สามารถอัปเดตสถานะการติดตามได้"
       );
     } finally {
       setFollowBusy(false);
@@ -125,15 +137,11 @@ export default function ProfilePage({
   }, [isFollowing, profileUser?._id]);
 
   const toMini = (p: PostItem): MiniPost => {
-    const sum = (Object.values(p?.interactions || {}) as number[]).reduce(
-      (a, b) => a + (typeof b === "number" ? b : 0),
-      0
-    );
     return {
       id: p.id,
       thumbnail: p.thumbnail,
       videoSrc: p.videoSrc,
-      views: sum,
+      views: p.views || 0,
     };
   };
 
@@ -148,11 +156,11 @@ export default function ProfilePage({
       key: "videos" | "reactions" | "saves";
       label: string;
       icon: typeof Clapperboard;
-    }> = [
-      { key: "videos", label: "วิดีโอ", icon: Clapperboard },
-    ];
-    if (hasReactions) tabs.push({ key: "reactions", label: "ปฏิกิริยา", icon: Heart });
-    if (hasSaves) tabs.push({ key: "saves", label: "ที่บันทึกไว้", icon: Bookmark });
+    }> = [{ key: "videos", label: "วิดีโอ", icon: Clapperboard }];
+    if (hasReactions)
+      tabs.push({ key: "reactions", label: "ปฏิกิริยา", icon: Heart });
+    if (hasSaves)
+      tabs.push({ key: "saves", label: "ที่บันทึกไว้", icon: Bookmark });
     return tabs;
   }, [hasReactions, hasSaves]);
 
@@ -174,7 +182,9 @@ export default function ProfilePage({
 
   const renderVideos = () => {
     if (Array.isArray(items) && items.length === 0) {
-      return <div className="mt-6 text-center text-white/70">ยังไม่มีโพสต์</div>;
+      return (
+        <div className="mt-6 text-center text-white/70">ยังไม่มีโพสต์</div>
+      );
     }
     if (gridItems.length > 0) {
       return (
@@ -185,7 +195,9 @@ export default function ProfilePage({
               href={`/feed/${p.id}`}
               prefetch={false}
               className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 focus:outline-none focus:ring-2 focus:ring-white/20"
-              aria-label={`เปิดวิดีโอ ${p.id} มียอดรับชม ${formatCount(p.views)} ครั้ง`}
+              aria-label={`เปิดวิดีโอ ${p.id} มียอดรับชม ${formatCount(
+                p.views
+              )} ครั้ง`}
             >
               <Image
                 src={p.thumbnail}
@@ -221,7 +233,11 @@ export default function ProfilePage({
 
   const renderReactions = () => {
     if (!hasReactions) {
-      return <div className="mt-6 text-center text-white/70">ยังไม่มีวิดีโอที่คุณแสดงปฏิกิริยา</div>;
+      return (
+        <div className="mt-6 text-center text-white/70">
+          ยังไม่มีวิดีโอที่คุณแสดงปฏิกิริยา
+        </div>
+      );
     }
     return (
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -230,7 +246,10 @@ export default function ProfilePage({
             key={item.reactionId}
             title={item.post.caption || "ไม่มีชื่อ"}
             thumb={item.post.thumbnail}
-            meta={`${REACTION_LABELS[item.reactionKey] ?? item.reactionKey.toUpperCase()} • ${formatDate(item.reactedAt)}`}
+            meta={`${
+              REACTION_LABELS[item.reactionKey] ??
+              item.reactionKey.toUpperCase()
+            } • ${formatDate(item.reactedAt)}`}
             href={`/feed/${item.post.id}`}
           />
         ))}
@@ -240,7 +259,11 @@ export default function ProfilePage({
 
   const renderSaves = () => {
     if (!hasSaves) {
-      return <div className="mt-6 text-center text-white/70">ยังไม่มีวิดีโอที่คุณบันทึกไว้</div>;
+      return (
+        <div className="mt-6 text-center text-white/70">
+          ยังไม่มีวิดีโอที่คุณบันทึกไว้
+        </div>
+      );
     }
     return (
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -303,16 +326,21 @@ export default function ProfilePage({
                   <h1 className="text-xl sm:text-2xl font-extrabold leading-tight truncate">
                     {displayName}
                   </h1>
-                  <p className="text-white/70 text-sm sm:text-base">@{normalizedHandle}</p>
+                  <p className="text-white/70 text-sm sm:text-base">
+                    @{normalizedHandle}
+                  </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/80">
                     <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5" /> {formatCount(followerCount)} ผู้ติดตาม
+                      <Users className="w-3.5 h-3.5" />{" "}
+                      {formatCount(followerCount)} ผู้ติดตาม
                     </span>
                     <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5">
-                      <UserPlus className="w-3.5 h-3.5" /> {formatCount(followingCount)} กำลังติดตาม
+                      <UserPlus className="w-3.5 h-3.5" />{" "}
+                      {formatCount(followingCount)} กำลังติดตาม
                     </span>
                     <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5">
-                      <Clapperboard className="w-3.5 h-3.5" /> {formatCount(postCount)} โพสต์
+                      <Clapperboard className="w-3.5 h-3.5" />{" "}
+                      {formatCount(postCount)} โพสต์
                     </span>
                   </div>
                   {profileUser?.website ? (
@@ -343,9 +371,14 @@ export default function ProfilePage({
                         isFollowing
                           ? "bg-white/10 border border-white/10 text-white hover:bg-white/15"
                           : "bg-white text-black hover:opacity-90"
-                      } ${followBusy ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                      } ${
+                        followBusy
+                          ? "opacity-70 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
                     >
-                      <UserPlus className="w-4 h-4" /> {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
+                      <UserPlus className="w-4 h-4" />{" "}
+                      {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
                     </button>
                     <button className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5">
                       <Share2 className="w-4 h-4" /> แชร์
@@ -361,7 +394,11 @@ export default function ProfilePage({
                         isFollowing
                           ? "bg-white/10 border border-white/10 text-white hover:bg-white/15"
                           : "bg-white text-black hover:opacity-90"
-                      } ${followBusy ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                      } ${
+                        followBusy
+                          ? "opacity-70 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
                     >
                       {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
                     </button>
@@ -417,7 +454,12 @@ interface MiniHorizontalCardProps {
   href: string;
 }
 
-function MiniHorizontalCard({ title, thumb, meta, href }: MiniHorizontalCardProps) {
+function MiniHorizontalCard({
+  title,
+  thumb,
+  meta,
+  href,
+}: MiniHorizontalCardProps) {
   return (
     <Link
       href={href}
