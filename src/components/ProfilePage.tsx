@@ -12,8 +12,15 @@ import type {
   UserMeta,
   UserProfileResponse,
   UserReactionsResponse,
+  ViewHistoryResponse,
 } from "@/interfaces/user";
-import { followUser } from "@/lib/api/user";
+import {
+  followUser,
+  getUserReactions,
+  getUserSavedVideos,
+  getUserViewHistory,
+} from "@/lib/api/user";
+import { getFeedByUserHandle } from "@/lib/api/feed";
 import {
   Eye,
   Play,
@@ -24,6 +31,8 @@ import {
   Share2,
   Link2,
   Bookmark,
+  History,
+  Loader2,
 } from "lucide-react";
 
 type MiniPost = {
@@ -48,6 +57,11 @@ interface ProfilePageProps {
   profile?: UserProfileResponse;
   reacted?: UserReactionsResponse;
   saved?: SavedVideosResponse;
+  history?: ViewHistoryResponse;
+  videoPaging?: {
+    nextCursor: string | null;
+    hasMore: boolean;
+  };
 }
 
 export default function ProfilePage({
@@ -56,6 +70,8 @@ export default function ProfilePage({
   profile,
   reacted,
   saved,
+  history,
+  videoPaging,
 }: ProfilePageProps) {
   const ambientColor = useAppSelector((s) => s.player.ambientColor);
   const user = useAppSelector((s) => s.user);
@@ -86,9 +102,47 @@ export default function ProfilePage({
     profile?.post_count ?? (Array.isArray(items) ? items.length : 0);
   const [followError, setFollowError] = useState<string | null>(null);
   const [followBusy, setFollowBusy] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"videos" | "reactions" | "saves">(
-    "videos"
+  const [activeTab, setActiveTab] = useState<
+    "videos" | "reactions" | "saves" | "history"
+  >("videos");
+
+  // Pagination states for videos
+  const [videoItems, setVideoItems] = useState<PostItem[]>(items ?? []);
+  const [videoCursor, setVideoCursor] = useState(
+    videoPaging?.nextCursor ?? null
   );
+  const [videoHasMore, setVideoHasMore] = useState(
+    videoPaging?.hasMore ?? false
+  );
+  const [videoLoading, setVideoLoading] = useState(false);
+
+  // Pagination states for reactions, saves, history
+  const [reactedItems, setReactedItems] = useState(reacted?.items ?? []);
+  const [reactedCursor, setReactedCursor] = useState(
+    reacted?.paging?.nextCursor ?? null
+  );
+  const [reactedHasMore, setReactedHasMore] = useState(
+    reacted?.paging?.hasMore ?? false
+  );
+  const [reactedLoading, setReactedLoading] = useState(false);
+
+  const [savedItems, setSavedItems] = useState(saved?.items ?? []);
+  const [savedCursor, setSavedCursor] = useState(
+    saved?.paging?.nextCursor ?? null
+  );
+  const [savedHasMore, setSavedHasMore] = useState(
+    saved?.paging?.hasMore ?? false
+  );
+  const [savedLoading, setSavedLoading] = useState(false);
+
+  const [historyItems, setHistoryItems] = useState(history?.items ?? []);
+  const [historyCursor, setHistoryCursor] = useState(
+    history?.paging?.nextCursor ?? null
+  );
+  const [historyHasMore, setHistoryHasMore] = useState(
+    history?.paging?.hasMore ?? false
+  );
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     setIsFollowing(Boolean(profile?.is_following));
@@ -136,6 +190,73 @@ export default function ProfilePage({
     }
   }, [isFollowing, profileUser?._id]);
 
+  const loadMoreVideos = useCallback(async () => {
+    if (!videoCursor || videoLoading || !normalizedHandle) return;
+    try {
+      setVideoLoading(true);
+      const data = await getFeedByUserHandle({
+        handle: normalizedHandle,
+        limit: 12,
+        cursor: videoCursor,
+      });
+      setVideoItems((prev) => [...prev, ...(data.items ?? [])]);
+      setVideoCursor(data.paging?.nextCursor ?? null);
+      setVideoHasMore(data.paging?.hasMore ?? false);
+    } catch (error) {
+      console.error("Failed to load more videos:", error);
+    } finally {
+      setVideoLoading(false);
+    }
+  }, [videoCursor, videoLoading, normalizedHandle]);
+
+  const loadMoreReactions = useCallback(async () => {
+    if (!reactedCursor || reactedLoading) return;
+    try {
+      setReactedLoading(true);
+      const data = await getUserReactions({ limit: 12, cursor: reactedCursor });
+      setReactedItems((prev) => [...prev, ...(data.items ?? [])]);
+      setReactedCursor(data.paging?.nextCursor ?? null);
+      setReactedHasMore(data.paging?.hasMore ?? false);
+    } catch (error) {
+      console.error("Failed to load more reactions:", error);
+    } finally {
+      setReactedLoading(false);
+    }
+  }, [reactedCursor, reactedLoading]);
+
+  const loadMoreSaves = useCallback(async () => {
+    if (!savedCursor || savedLoading) return;
+    try {
+      setSavedLoading(true);
+      const data = await getUserSavedVideos({ limit: 12, cursor: savedCursor });
+      setSavedItems((prev) => [...prev, ...(data.items ?? [])]);
+      setSavedCursor(data.paging?.nextCursor ?? null);
+      setSavedHasMore(data.paging?.hasMore ?? false);
+    } catch (error) {
+      console.error("Failed to load more saves:", error);
+    } finally {
+      setSavedLoading(false);
+    }
+  }, [savedCursor, savedLoading]);
+
+  const loadMoreHistory = useCallback(async () => {
+    if (!historyCursor || historyLoading) return;
+    try {
+      setHistoryLoading(true);
+      const data = await getUserViewHistory({
+        limit: 12,
+        cursor: historyCursor,
+      });
+      setHistoryItems((prev) => [...prev, ...(data.items ?? [])]);
+      setHistoryCursor(data.paging?.nextCursor ?? null);
+      setHistoryHasMore(data.paging?.hasMore ?? false);
+    } catch (error) {
+      console.error("Failed to load more history:", error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyCursor, historyLoading]);
+
   const toMini = (p: PostItem): MiniPost => {
     return {
       id: p.id,
@@ -145,24 +266,24 @@ export default function ProfilePage({
     };
   };
 
-  const hasRealItems = Array.isArray(items) && items.length > 0;
-  const gridItems = hasRealItems ? (items as PostItem[]).map(toMini) : [];
-  const reactedItems = reacted?.items ?? [];
-  const savedItems = saved?.items ?? [];
+  const gridItems = videoItems.map(toMini);
   const hasReactions = reactedItems.length > 0;
   const hasSaves = savedItems.length > 0;
+  const hasHistory = historyItems.length > 0;
   const visibleTabs = useMemo(() => {
     const tabs: Array<{
-      key: "videos" | "reactions" | "saves";
+      key: "videos" | "reactions" | "saves" | "history";
       label: string;
       icon: typeof Clapperboard;
     }> = [{ key: "videos", label: "วิดีโอ", icon: Clapperboard }];
     if (hasReactions)
-      tabs.push({ key: "reactions", label: "ปฏิกิริยา", icon: Heart });
+      tabs.push({ key: "reactions", label: "ที่ถูกใจ", icon: Heart });
     if (hasSaves)
       tabs.push({ key: "saves", label: "ที่บันทึกไว้", icon: Bookmark });
+    if (hasHistory)
+      tabs.push({ key: "history", label: "ประวัติการดู", icon: History });
     return tabs;
-  }, [hasReactions, hasSaves]);
+  }, [hasReactions, hasSaves, hasHistory]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.key === activeTab)) {
@@ -181,13 +302,13 @@ export default function ProfilePage({
   };
 
   const renderVideos = () => {
-    if (Array.isArray(items) && items.length === 0) {
+    if (videoItems.length === 0) {
       return (
         <div className="mt-6 text-center text-white/70">ยังไม่มีโพสต์</div>
       );
     }
-    if (gridItems.length > 0) {
-      return (
+    return (
+      <>
         <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {gridItems.map((p) => (
             <Link
@@ -226,9 +347,26 @@ export default function ProfilePage({
             </Link>
           ))}
         </div>
-      );
-    }
-    return <div className="mt-6 text-center text-white/70">ยังไม่มีโพสต์</div>;
+        {videoHasMore && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={loadMoreVideos}
+              disabled={videoLoading}
+              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {videoLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังโหลด...
+                </>
+              ) : (
+                "โหลดเพิ่มเติม"
+              )}
+            </button>
+          </div>
+        )}
+      </>
+    );
   };
 
   const renderReactions = () => {
@@ -240,20 +378,40 @@ export default function ProfilePage({
       );
     }
     return (
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {reactedItems.map((item) => (
-          <MiniHorizontalCard
-            key={item.reactionId}
-            title={item.post.caption || "ไม่มีชื่อ"}
-            thumb={item.post.thumbnail}
-            meta={`${
-              REACTION_LABELS[item.reactionKey] ??
-              item.reactionKey.toUpperCase()
-            } • ${formatDate(item.reactedAt)}`}
-            href={`/feed/${item.post.id}`}
-          />
-        ))}
-      </div>
+      <>
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {reactedItems.map((item) => (
+            <MiniHorizontalCard
+              key={item.reactionId}
+              title={item.post.caption || "ไม่มีชื่อ"}
+              thumb={item.post.thumbnail}
+              meta={`${
+                REACTION_LABELS[item.reactionKey] ??
+                item.reactionKey.toUpperCase()
+              } • ${formatDate(item.reactedAt)}`}
+              href={`/feed/${item.post.id}`}
+            />
+          ))}
+        </div>
+        {reactedHasMore && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={loadMoreReactions}
+              disabled={reactedLoading}
+              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {reactedLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังโหลด...
+                </>
+              ) : (
+                "โหลดเพิ่มเติม"
+              )}
+            </button>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -266,17 +424,80 @@ export default function ProfilePage({
       );
     }
     return (
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {savedItems.map((item) => (
-          <MiniHorizontalCard
-            key={item.postId}
-            title={item.post.caption || "ไม่มีชื่อ"}
-            thumb={item.post.thumbnail}
-            meta={`บันทึกเมื่อ ${formatDate(item.savedAt)}`}
-            href={`/feed/${item.post.id}`}
-          />
-        ))}
-      </div>
+      <>
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {savedItems.map((item) => (
+            <MiniHorizontalCard
+              key={item.postId}
+              title={item.post.caption || "ไม่มีชื่อ"}
+              thumb={item.post.thumbnail}
+              meta={`บันทึกเมื่อ ${formatDate(item.savedAt)}`}
+              href={`/feed/${item.post.id}`}
+            />
+          ))}
+        </div>
+        {savedHasMore && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={loadMoreSaves}
+              disabled={savedLoading}
+              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {savedLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังโหลด...
+                </>
+              ) : (
+                "โหลดเพิ่มเติม"
+              )}
+            </button>
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const renderHistory = () => {
+    if (!hasHistory) {
+      return (
+        <div className="mt-6 text-center text-white/70">
+          ยังไม่มีประวัติการดูวิดีโอ
+        </div>
+      );
+    }
+    return (
+      <>
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {historyItems.map((item) => (
+            <MiniHorizontalCard
+              key={item.viewId}
+              title={item.post.caption || "ไม่มีชื่อ"}
+              thumb={item.post.thumbnail}
+              meta={`ดูล่าสุดเมื่อ ${formatDate(item.viewedAt)}`}
+              href={`/feed/${item.post.id}`}
+            />
+          ))}
+        </div>
+        {historyHasMore && (
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={loadMoreHistory}
+              disabled={historyLoading}
+              className="px-6 py-3 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {historyLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  กำลังโหลด...
+                </>
+              ) : (
+                "โหลดเพิ่มเติม"
+              )}
+            </button>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -286,6 +507,8 @@ export default function ProfilePage({
         return renderReactions();
       case "saves":
         return renderSaves();
+      case "history":
+        return renderHistory();
       default:
         return renderVideos();
     }

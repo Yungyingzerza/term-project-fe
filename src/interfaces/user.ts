@@ -197,3 +197,28 @@ export interface UploadProfileImageResponse {
   pictureUrl: string;
   user: UserProfileUser;
 }
+
+export interface UserViewedVideoItem {
+  postId: string;
+  viewId: string;
+  viewedAt: string;
+  firstViewedAt: string;
+  watchTime: number;
+  post: PostLite & {
+    viewer?: {
+      reaction?: string | null;
+      saved?: boolean;
+      viewed?: boolean;
+      watchTime?: number;
+      lastViewedAt?: string;
+    };
+  };
+}
+
+export interface ViewHistoryResponse {
+  items: UserViewedVideoItem[];
+  paging: {
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
+}

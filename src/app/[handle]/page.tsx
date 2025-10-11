@@ -6,6 +6,7 @@ import type {
   UserMeta,
   UserProfileResponse,
   UserReactionsResponse,
+  ViewHistoryResponse,
 } from "@/interfaces/user";
 import { getFeedByUserHandle } from "@/lib/api/feed";
 import {
@@ -13,6 +14,7 @@ import {
   getUserProfile,
   getUserReactions,
   getUserSavedVideos,
+  getUserViewHistory,
 } from "@/lib/api/user";
 
 interface PageProps {
@@ -38,6 +40,8 @@ export default async function HandleProfilePage(props: PageProps) {
   let userId: string | undefined;
   let reacted: UserReactionsResponse | undefined;
   let saved: SavedVideosResponse | undefined;
+  let history: ViewHistoryResponse | undefined;
+  let videoPaging: { nextCursor: string | null; hasMore: boolean } | undefined;
 
   try {
     const lookup = await getUserIdByHandle(handle, {
@@ -59,7 +63,7 @@ export default async function HandleProfilePage(props: PageProps) {
 
     try {
       reacted = await getUserReactions(
-        { limit: 24 },
+        { limit: 12 },
         { cookie: token ? `accessToken=${token}` : undefined }
       );
     } catch {
@@ -68,22 +72,32 @@ export default async function HandleProfilePage(props: PageProps) {
 
     try {
       saved = await getUserSavedVideos(
-        { limit: 24 },
+        { limit: 12 },
         { cookie: token ? `accessToken=${token}` : undefined }
       );
     } catch {
       // ignore if saved videos not available
+    }
+
+    try {
+      history = await getUserViewHistory(
+        { limit: 12 },
+        { cookie: token ? `accessToken=${token}` : undefined }
+      );
+    } catch {
+      // ignore if view history not available
     }
   }
 
   try {
     const data = await getFeedByUserHandle({
       handle,
-      limit: 24,
+      limit: 12,
       cursor: cursor ?? null,
       cookie: token ? `accessToken=${token}` : undefined,
     });
     items = (data?.items as PostItem[]) || [];
+    videoPaging = data?.paging;
   } catch {
     // ignore; we can still render profile info if available
   }
@@ -112,6 +126,8 @@ export default async function HandleProfilePage(props: PageProps) {
       profile={profile}
       reacted={reacted}
       saved={saved}
+      history={history}
+      videoPaging={videoPaging}
     />
   );
 }

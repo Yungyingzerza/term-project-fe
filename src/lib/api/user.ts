@@ -15,6 +15,7 @@ import type {
   CreateEmailPayload,
   CreateEmailResponse,
   GetEmailsResponse,
+  ViewHistoryResponse,
 } from "@/interfaces";
 import { buildApiUrl } from "./utils";
 
@@ -261,9 +262,10 @@ export async function createEmail(
   return (await res.json()) as CreateEmailResponse;
 }
 
-export async function getEmails(
-  { signal, cookie }: RequestOptions = {}
-): Promise<GetEmailsResponse> {
+export async function getEmails({
+  signal,
+  cookie,
+}: RequestOptions = {}): Promise<GetEmailsResponse> {
   const url = buildApiUrl("user/email");
 
   const res = await fetch(url.toString(), {
@@ -383,4 +385,35 @@ export async function getUserReactions(
   }
 
   return (await res.json()) as UserReactionsResponse;
+}
+
+export async function getUserViewHistory(
+  params: PaginationParams = {},
+  { signal, cookie }: RequestOptions = {}
+): Promise<ViewHistoryResponse> {
+  const url = buildApiUrl("user/history/videos");
+  if (params.limit) url.searchParams.set("limit", String(params.limit));
+  if (params.cursor) url.searchParams.set("cursor", params.cursor);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    signal,
+    credentials: "include",
+    cache: "no-store",
+  } as RequestInit);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Failed to fetch view history: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
+  }
+
+  return (await res.json()) as ViewHistoryResponse;
 }
