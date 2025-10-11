@@ -372,14 +372,17 @@ export default function ProfilePage({
       label: string;
       icon: typeof Clapperboard;
     }> = [{ key: "videos", label: "วิดีโอ", icon: Clapperboard }];
-    if (hasReactions)
-      tabs.push({ key: "reactions", label: "ที่ถูกใจ", icon: Heart });
-    if (hasSaves)
-      tabs.push({ key: "saves", label: "ที่บันทึกไว้", icon: Bookmark });
-    if (hasHistory)
-      tabs.push({ key: "history", label: "ประวัติการดู", icon: History });
+    // Only show reactions, saves, and history tabs on user's own profile
+    if (isSelfProfile) {
+      if (hasReactions)
+        tabs.push({ key: "reactions", label: "ที่ถูกใจ", icon: Heart });
+      if (hasSaves)
+        tabs.push({ key: "saves", label: "ที่บันทึกไว้", icon: Bookmark });
+      if (hasHistory)
+        tabs.push({ key: "history", label: "ประวัติการดู", icon: History });
+    }
     return tabs;
-  }, [hasReactions, hasSaves, hasHistory]);
+  }, [hasReactions, hasSaves, hasHistory, isSelfProfile]);
 
   useEffect(() => {
     if (!visibleTabs.some((tab) => tab.key === activeTab)) {

@@ -76,6 +76,7 @@ export default function Feed({
   const watchTotalsRef = useRef<Map<string, number>>(new Map());
   const lastSentWatchRef = useRef<Map<string, number>>(new Map());
   const activePostIdRef = useRef<string | null>(null);
+  const hasScrolledToTopRef = useRef<boolean>(false);
 
   const handleWatchComplete = useCallback(
     ({ postId, watchTimeSeconds }: VideoWatchCompletePayload) => {
@@ -141,12 +142,27 @@ export default function Feed({
     }
     setIndex(0);
     prefetchIndexRef.current = null;
+    hasScrolledToTopRef.current = false;
     const el = containerRef.current;
     if (el) {
       el.scrollTop = 0;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, forcedAlgo]);
+
+  // Ensure scroll to top on initial mount and when items load
+  useEffect(() => {
+    if (items.length > 0 && !hasScrolledToTopRef.current) {
+      const el = containerRef.current;
+      if (el) {
+        // Force scroll to top to ensure first video is visible
+        requestAnimationFrame(() => {
+          el.scrollTop = 0;
+          hasScrolledToTopRef.current = true;
+        });
+      }
+    }
+  }, [items.length]);
 
   //estimate network speed
   useEffect(() => {
