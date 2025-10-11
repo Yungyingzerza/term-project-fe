@@ -81,7 +81,7 @@ export default function ExplorePage() {
   const ambientColor = useAppSelector((s) => s.player.ambientColor);
   const searchParams = useSearchParams();
   const urlQuery = searchParams.get("q") || "";
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [activeQuery, setActiveQuery] = useState("");
   const [selectedType, setSelectedType] = useState<ExploreSearchType>("posts");

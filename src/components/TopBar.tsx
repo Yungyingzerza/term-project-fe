@@ -32,7 +32,7 @@ export default function TopBar() {
     // Navigate to explore page with search query
     const encodedQuery = encodeURIComponent(trimmed);
     handleNavigation(`/explore?q=${encodedQuery}`);
-    
+
     // Clear the search input after navigation
     setSearchQuery("");
   };
@@ -47,9 +47,13 @@ export default function TopBar() {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setMenuOpen(false);
-      
+
       // Focus search input when "/" is pressed (unless already in an input)
-      if (e.key === "/" && document.activeElement?.tagName !== "INPUT" && document.activeElement?.tagName !== "TEXTAREA") {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
