@@ -2,11 +2,11 @@
 import {
   Compass,
   Home,
-  Radio,
   Sparkles,
   Users,
   User,
   MessageCircle,
+  CheckCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -135,8 +135,15 @@ export default function Sidebar() {
                           {org.name?.[0]?.toUpperCase() ?? "?"}
                         </div>
                       )}
-                      <div className="ml-3 leading-tight">
-                        <p className="text-sm font-semibold">{org.name}</p>
+                      <div className="ml-3 leading-tight flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-semibold truncate">
+                            {org.name}
+                          </p>
+                          {org.is_work_org && (
+                            <CheckCircle className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                          )}
+                        </div>
                       </div>
                     </button>
                   );

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import TopBar from "./TopBar";
@@ -143,9 +143,6 @@ export default function ProfilePage({
     history?.paging?.hasMore ?? false
   );
   const [historyLoading, setHistoryLoading] = useState(false);
-
-  // Ref for the content container to detect scroll
-  const contentContainerRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     setIsFollowing(Boolean(profile?.is_following));

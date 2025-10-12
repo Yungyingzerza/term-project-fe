@@ -98,12 +98,15 @@ export function GroupManagement({
         try {
           await leaveGroup(organization._id);
           window.location.href = "/profile";
-        } catch (error: any) {
+        } catch (error) {
           setModalState({
             isOpen: true,
             type: "error",
             title: "เกิดข้อผิดพลาด",
-            message: error.message || "ไม่สามารถออกจากกลุ่มได้",
+            message:
+              error instanceof Error
+                ? error.message
+                : "ไม่สามารถออกจากกลุ่มได้",
           });
         }
       },
@@ -122,12 +125,13 @@ export function GroupManagement({
         title: "สำเร็จ",
         message: "สร้างรหัสเชิญเรียบร้อยแล้ว",
       });
-    } catch (error: any) {
+    } catch (error) {
       setModalState({
         isOpen: true,
         type: "error",
         title: "เกิดข้อผิดพลาด",
-        message: error.message || "ไม่สามารถสร้างรหัสเชิญได้",
+        message:
+          error instanceof Error ? error.message : "ไม่สามารถสร้างรหัสเชิญได้",
       });
     }
   };
@@ -147,12 +151,15 @@ export function GroupManagement({
             title: "สำเร็จ",
             message: "เพิกถอนรหัสเชิญเรียบร้อยแล้ว",
           });
-        } catch (error: any) {
+        } catch (error) {
           setModalState({
             isOpen: true,
             type: "error",
             title: "เกิดข้อผิดพลาด",
-            message: error.message || "ไม่สามารถเพิกถอนรหัสเชิญได้",
+            message:
+              error instanceof Error
+                ? error.message
+                : "ไม่สามารถเพิกถอนรหัสเชิญได้",
           });
         }
       },
@@ -174,12 +181,13 @@ export function GroupManagement({
             title: "สำเร็จ",
             message: `ลบ ${username} ออกจากกลุ่มเรียบร้อยแล้ว`,
           });
-        } catch (error: any) {
+        } catch (error) {
           setModalState({
             isOpen: true,
             type: "error",
             title: "เกิดข้อผิดพลาด",
-            message: error.message || "ไม่สามารถลบสมาชิกได้",
+            message:
+              error instanceof Error ? error.message : "ไม่สามารถลบสมาชิกได้",
           });
         }
       },
@@ -191,7 +199,7 @@ export function GroupManagement({
       await navigator.clipboard.writeText(code);
       setCopiedCode(code);
       setTimeout(() => setCopiedCode(null), 2000);
-    } catch (err) {
+    } catch {
       setModalState({
         isOpen: true,
         type: "error",

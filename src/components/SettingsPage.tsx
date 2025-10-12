@@ -5,7 +5,6 @@ import BottomTabs from "./BottomTabs";
 import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
-  Check,
   LogOut,
   Save,
   Settings,
@@ -14,7 +13,6 @@ import {
   UserCog,
   X,
   Users,
-  ExternalLink,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, SetStateAction, KeyboardEvent } from "react";
@@ -101,11 +99,6 @@ export default function SettingsPage() {
   }, [reloadEmails]);
 
   useEffect(() => () => clearAvatarObjectUrl(), [clearAvatarObjectUrl]);
-
-  // Local-only preferences (no backend yet)
-  const [showActivity, setShowActivity] = useState(true);
-  // Mentions disabled for now
-  // const [allowMentions, setAllowMentions] = useState(true);
 
   // Avatar image input
   const avatarInputRef = useRef<HTMLInputElement | null>(null);

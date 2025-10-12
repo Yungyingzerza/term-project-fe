@@ -60,7 +60,10 @@ async function checkIfUserIsAdmin(orgId: string, userId: string) {
 
     if (!response.ok) return false;
     const data = await response.json();
-    const member = data.members?.find((m: any) => m.user_id._id === userId);
+    const member = data.members?.find(
+      (m: { user_id: { _id: string }; role: string }) =>
+        m.user_id._id === userId
+    );
     return member?.role === "admin";
   } catch {
     return false;
@@ -85,7 +88,7 @@ export default async function GroupSettingsPage(props: PageProps) {
     organization = await getOrganizationDetail(orgId, {
       cookie: token ? `accessToken=${token}` : undefined,
     });
-  } catch (error) {
+  } catch {
     redirect("/groups");
   }
 
