@@ -177,8 +177,8 @@ export default function MessagesPage() {
       <div className="relative z-10 flex flex-1">
         <Sidebar />
 
-        <main className="flex-1 pb-24 md:pb-6 md:ml-64">
-          <section className="max-w-7xl mx-auto px-4 py-6 h-full">
+        <main className="flex-1 pb-24 md:pb-6 md:ml-64 flex flex-col">
+          <section className="w-full px-4 lg:px-6 py-6 flex-1 flex flex-col">
             {/* Header */}
             <div
               className={`${
@@ -192,10 +192,10 @@ export default function MessagesPage() {
             </div>
 
             {/* Content: Conversations list + Chat panel */}
-            <div className="min-h-0 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-5 flex-1 overflow-hidden">
+            <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] gap-5 flex-1 min-h-0">
               {/* Conversations */}
               <div
-                className={`rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm h-full overflow-hidden ${
+                className={`rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm overflow-hidden ${
                   showChatOnMobile ? "hidden lg:flex" : "flex"
                 } flex-col`}
               >
@@ -264,7 +264,7 @@ export default function MessagesPage() {
 
               {/* Chat panel */}
               <div
-                className={`rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm h-full min-h-0 overflow-hidden ${
+                className={`rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm overflow-hidden ${
                   showChatOnMobile ? "flex" : "hidden lg:flex"
                 } flex-col`}
               >
