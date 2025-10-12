@@ -7,6 +7,7 @@ import {
   Volume2,
   VolumeX,
   X,
+  Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
@@ -15,9 +16,11 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleMuted, setAmbientColor, setVolume } from "@/store/playerSlice";
 import ActionRail from "./ActionRail";
+import { Modal } from "./Modal";
 import type { Organization, VideoCardProps } from "@/interfaces";
 import { getOrganizationDetail } from "@/lib/api/organization";
 import { followUser, getUserIdByHandle, getUserProfile } from "@/lib/api/user";
+import { deleteVideo } from "@/lib/api/media";
 
 type VideoWithCapture = HTMLVideoElement & {
   captureStream?: () => MediaStream;
@@ -98,10 +101,17 @@ export default function VideoCard({
   const [orgLoading, setOrgLoading] = useState<boolean>(false);
   const [orgError, setOrgError] = useState<string | null>(null);
   const [orgPickerOpen, setOrgPickerOpen] = useState<boolean>(false);
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const authorProfileHref = normalizedHandle ? `/${normalizedHandle}` : null;
   const isFollowing = Boolean(isFollowingAuthor);
   const showFollowButton = Boolean(
     authorUserId && currentUserId && authorUserId !== currentUserId
+  );
+  const isOwnPost = Boolean(
+    authorUserId && currentUserId && authorUserId === currentUserId
   );
   const followButtonClasses = isFollowing
     ? "ml-2 text-xs px-3 py-1 rounded-full border border-white/30 bg-white/10 text-white font-semibold hover:bg-white/20"
@@ -201,6 +211,10 @@ export default function VideoCard({
     setOrgPickerOpen(false);
   }, []);
 
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+  }, []);
+
   useEffect(() => {
     if (!orgPickerOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -214,6 +228,32 @@ export default function VideoCard({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [orgPickerOpen, closeOrgPicker]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+      }
+    };
+    const onClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (
+        !target.closest('[aria-label="เมนูเพิ่มเติม"]') &&
+        !target.closest(".absolute.right-0")
+      ) {
+        closeMenu();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("click", onClickOutside);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("click", onClickOutside);
+    };
+  }, [menuOpen, closeMenu]);
+
   const handleFollowToggle = useCallback(async () => {
     if (
       !authorUserId ||
@@ -242,6 +282,33 @@ export default function VideoCard({
       setFollowBusy(false);
     }
   }, [authorUserId, currentUserId, followBusy, followLoaded, isFollowing]);
+
+  const handleDeleteVideo = useCallback(async () => {
+    if (!post.id || deleteLoading) return;
+
+    try {
+      setDeleteLoading(true);
+      setDeleteError(null);
+      await deleteVideo(post.id);
+
+      // Close modal and menu, then redirect to main feed
+      setShowDeleteModal(false);
+      setMenuOpen(false);
+      router.push("/");
+    } catch (error: unknown) {
+      setDeleteError(
+        error instanceof Error ? error.message : "ไม่สามารถลบวิดีโอได้"
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [post.id, deleteLoading, router]);
+
+  const handleDeleteClick = useCallback(() => {
+    setShowDeleteModal(true);
+    setMenuOpen(false);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     const ctrl = new AbortController();
@@ -420,19 +487,10 @@ export default function VideoCard({
 
   useEffect(() => {
     if (!orgPickerOpen) return;
-    if (
-      orgDetails.length <= 1 ||
-      orgError ||
-      !hasOrganizationVisibility
-    ) {
+    if (orgDetails.length <= 1 || orgError || !hasOrganizationVisibility) {
       setOrgPickerOpen(false);
     }
-  }, [
-    hasOrganizationVisibility,
-    orgDetails.length,
-    orgError,
-    orgPickerOpen,
-  ]);
+  }, [hasOrganizationVisibility, orgDetails.length, orgError, orgPickerOpen]);
 
   const handleVolumeChange = useCallback(
     (value: number) => {
@@ -1177,414 +1235,461 @@ export default function VideoCard({
   }, [isActive, dispatch]);
 
   return (
-    <article className="relative w-full h-full sm:rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
-      {/* Blurred video background to avoid black bars while preserving aspect ratio */}
-      {/* Show blurred poster while background not ready, unsupported, or main video not ready */}
-      <div
-        aria-hidden
-        className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover scale-110 pointer-events-none ${
-          usePosterBg || !videoReady ? "" : "hidden"
-        } blur-2xl`}
-        style={{ backgroundImage: `url(${post.thumbnail})` }}
-      />
-      <video
-        ref={bgVideoRef}
-        className={`absolute inset-0 z-0 w-full h-full object-cover scale-110 pointer-events-none ${
-          usePosterBg || !videoReady ? "hidden" : "blur-2xl"
-        }`}
-        crossOrigin="use-credentials"
-        playsInline
-        muted
-        loop
-        autoPlay={isActive && playing}
-        aria-hidden
-      />
-      {/* Crisp poster overlay for main video until it’s ready */}
-      {!videoReady && (
-        <Image
+    <>
+      <article className="relative w-full h-full sm:rounded-2xl overflow-hidden bg-neutral-900 border border-white/10">
+        {/* Blurred video background to avoid black bars while preserving aspect ratio */}
+        {/* Show blurred poster while background not ready, unsupported, or main video not ready */}
+        <div
           aria-hidden
-          className="absolute inset-0 z-20 w-full h-full object-contain pointer-events-none"
-          src={post.thumbnail}
-          alt="Video placeholder"
-          fill
-          sizes="100vw"
-          unoptimized
+          className={`absolute inset-0 z-0 w-full h-full bg-center bg-cover scale-110 pointer-events-none ${
+            usePosterBg || !videoReady ? "" : "hidden"
+          } blur-2xl`}
+          style={{ backgroundImage: `url(${post.thumbnail})` }}
         />
-      )}
-      <video
-        ref={videoRef}
-        className="relative z-10 object-contain w-full h-full"
-        crossOrigin="use-credentials"
-        src={shouldLoad ? post.videoSrc : undefined}
-        preload={isActive ? "auto" : shouldPreload ? "metadata" : "none"}
-        poster={post.thumbnail}
-        loop
-        playsInline
-        muted={muted}
-        autoPlay={isActive && playing}
-        onClick={() => isActive && setPlaying((v) => !v)}
-      />
+        <video
+          ref={bgVideoRef}
+          className={`absolute inset-0 z-0 w-full h-full object-cover scale-110 pointer-events-none ${
+            usePosterBg || !videoReady ? "hidden" : "blur-2xl"
+          }`}
+          crossOrigin="use-credentials"
+          playsInline
+          muted
+          loop
+          autoPlay={isActive && playing}
+          aria-hidden
+        />
+        {/* Crisp poster overlay for main video until it’s ready */}
+        {!videoReady && (
+          <Image
+            aria-hidden
+            className="absolute inset-0 z-20 w-full h-full object-contain pointer-events-none"
+            src={post.thumbnail}
+            alt="Video placeholder"
+            fill
+            sizes="100vw"
+            unoptimized
+          />
+        )}
+        <video
+          ref={videoRef}
+          className="relative z-10 object-contain w-full h-full"
+          crossOrigin="use-credentials"
+          src={shouldLoad ? post.videoSrc : undefined}
+          preload={isActive ? "auto" : shouldPreload ? "metadata" : "none"}
+          poster={post.thumbnail}
+          loop
+          playsInline
+          muted={muted}
+          autoPlay={isActive && playing}
+          onClick={() => isActive && setPlaying((v) => !v)}
+        />
 
-      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 z-20 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-b from-black/30 via-transparent to-black/50" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 z-20 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-      <div className="absolute left-2 sm:left-4 bottom-20 sm:bottom-24 space-y-2 max-w-[80%] z-30">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleNavigateToProfile}
-            disabled={!authorProfileHref}
-            className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-70 pointer-events-auto"
-          >
-            <Image
-              src={post.user.avatar}
-              alt={`ภาพโปรไฟล์ของ ${post.user.name}`}
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded-full border border-white/10 cursor-pointer"
-              unoptimized
-            />
-            <span className="text-left">
-              <span className="block font-semibold leading-tight cursor-pointer w-fit">
-                {post.user.name}
-              </span>
-              <span className="block text-xs text-white/60 leading-tight cursor-pointer">
-                {post.user.handle}
-              </span>
-            </span>
-          </button>
-          {showFollowButton ? (
+        <div className="absolute left-2 sm:left-4 bottom-20 sm:bottom-24 space-y-2 max-w-[80%] z-30">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleFollowToggle}
-              disabled={!followLoaded || followBusy}
-              className={`${followButtonClasses} pointer-events-auto ${
-                !followLoaded || followBusy
-                  ? "opacity-60 cursor-not-allowed"
-                  : ""
-              }`}
+              onClick={handleNavigateToProfile}
+              disabled={!authorProfileHref}
+              className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-70 pointer-events-auto"
             >
-              {followBusy ? "..." : isFollowing ? "กำลังติดตาม" : "ติดตาม"}
-            </button>
-          ) : null}
-        </div>
-        {followError ? (
-          <p className="text-xs text-red-400">{followError}</p>
-        ) : null}
-        <p className="text-sm leading-snug">
-          {post.caption}{" "}
-          <span className="text-white/60">{post.tags.join(" ")}</span>
-        </p>
-      </div>
-
-      <div className="absolute right-2 sm:right-4 top-2 sm:top-4 flex items-center gap-2 z-30">
-        <div
-          className="relative"
-          onPointerEnter={handleVolumePointerEnter}
-          onPointerLeave={handleVolumePointerLeave}
-        >
-          <button
-            onClick={() => dispatch(toggleMuted())}
-            onPointerDown={handleVolumeButtonPointerDown}
-            className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
-            aria-label={globalMuted ? "เปิดเสียงวิดีโอ" : "ปิดเสียงวิดีโอ"}
-          >
-            {globalMuted ? (
-              <VolumeX className="w-5 h-5" />
-            ) : (
-              <Volume2 className="w-5 h-5" />
-            )}
-          </button>
-          <div
-            className={`absolute right-0 mt-2 w-44 rounded-2xl border border-white/10 bg-black/80 p-3 shadow-2xl transition-all duration-200 ease-out backdrop-blur-sm ${
-              volumeTrayOpen
-                ? "pointer-events-auto opacity-100 translate-y-0"
-                : "pointer-events-none opacity-0 translate-y-1"
-            }`}
-          >
-            <div className="flex items-end gap-4">
-              <div
-                ref={volumeBarRef}
-                className="relative h-32 w-12 cursor-pointer"
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  volumePointerIdRef.current = e.pointerId;
-                  e.currentTarget.setPointerCapture?.(e.pointerId);
-                  handleSliderPointerDown(e.pointerType);
-                  setVolumeFromClientY(e.clientY);
-                }}
-              >
-                <div className="absolute inset-0 rounded-3xl border border-white/10 bg-white/5" />
-                <div className="absolute inset-x-[9px] top-3 bottom-3 rounded-full bg-white/12 overflow-hidden">
-                  <div
-                    className="absolute inset-x-0 bottom-0 h-full origin-bottom rounded-full bg-gradient-to-t from-white via-white to-white/70"
-                    style={{ transform: `scaleY(${sliderRatio})` }}
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_75%)]" />
-                </div>
-                <div
-                  className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-black/30 bg-white shadow-[0_6px_16px_rgba(0,0,0,0.55)]"
-                  style={{
-                    bottom: `calc(${sliderRatio} * (100% - 24px) + 12px)`,
-                  }}
-                />
-              </div>
-              <div className="flex flex-col items-end gap-1">
-                <span className="text-[11px] uppercase tracking-[0.18em] text-white/50">
-                  ระดับเสียง
+              <Image
+                src={post.user.avatar}
+                alt={`ภาพโปรไฟล์ของ ${post.user.name}`}
+                width={32}
+                height={32}
+                className="w-8 h-8 rounded-full border border-white/10 cursor-pointer"
+                unoptimized
+              />
+              <span className="text-left">
+                <span className="block font-semibold leading-tight cursor-pointer w-fit">
+                  {post.user.name}
                 </span>
-                <span className="text-base font-semibold text-white">
-                  {sliderValue}%
+                <span className="block text-xs text-white/60 leading-tight cursor-pointer">
+                  {post.user.handle}
                 </span>
-              </div>
-            </div>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={sliderValue}
-              aria-label="ระดับเสียง"
-              className="sr-only"
-              onChange={(e) => {
-                const next = Number(e.target.value) / 100;
-                handleVolumeChange(next);
-                openVolumeTray();
-              }}
-              onFocus={() => openVolumeTray()}
-              onBlur={() => scheduleVolumeTrayClose(400)}
-            />
-            <p className="mt-2 text-[11px] text-white/55">
-              ลากหรือแตะตัวเลื่อนเพื่อปรับระดับเสียง
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => isActive && setPlaying((v) => !v)}
-          className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60 disabled:opacity-50"
-          disabled={!isActive}
-        >
-          {playing ? (
-            <Pause className="w-5 h-5" />
-          ) : (
-            <Play className="w-5 h-5" />
-          )}
-        </button>
-        <button className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60">
-          <MoreVertical className="w-5 h-5" />
-        </button>
-      </div>
-
-      <ActionRail
-        postId={post.id}
-        interactions={post.interactions}
-        comments={post.comments}
-        saves={post.saves}
-        viewerReaction={post.viewer?.reaction ?? null}
-        viewerSaved={post.viewer?.saved ?? null}
-      />
-      {hasOrganizationVisibility ? (
-        <div className="pointer-events-none absolute left-2 sm:left-4 bottom-4 pr-20 z-30">
-          <div className="pointer-events-auto flex max-w-[78vw] sm:max-w-md items-center gap-2 rounded-full border border-white/12 bg-black/55 px-3 py-1.5 text-xs sm:text-sm backdrop-blur">
-            {orgLoading ? (
-              <span className="flex items-center gap-2 text-white/70">
-                <span className="inline-flex h-3 w-3 animate-spin rounded-full border-2 border-white/35 border-t-transparent" />
-                <span>กำลังโหลดองค์กร...</span>
               </span>
-            ) : orgError ? (
-              <span className="text-red-300">โหลดข้อมูลองค์กรไม่สำเร็จ</span>
-            ) : primaryOrganization ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleNavigateToOrganization(primaryOrganization._id)
-                  }
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                  title={primaryOrganization.name}
-                >
-                  <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/40">
-                    {primaryOrganization.logo_url ? (
-                      <Image
-                        src={primaryOrganization.logo_url}
-                        alt={`โลโก้องค์กร ${primaryOrganization.name}`}
-                        width={24}
-                        height={24}
-                        className="h-6 w-6 object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <Building2 className="h-4 w-4 text-white/75" />
-                    )}
-                  </span>
-                  <span className="max-w-[140px] truncate text-white">
-                    {primaryOrganization.name}
-                  </span>
-                </button>
-                {extraOrganizationCount > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setOrgPickerOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-white/80 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                    aria-label={`ดูองค์กรอื่นอีก ${extraOrganizationCount} แห่ง`}
-                  >
-                    +{extraOrganizationCount}
-                  </button>
-                ) : null}
-              </>
-            ) : (
-              <span className="text-white/70">แชร์กับองค์กร</span>
-            )}
-          </div>
-        </div>
-      ) : null}
-      {orgPickerOpen && remainingOrganizations.length > 0 ? (
-        <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-          <div
-            className="pointer-events-auto absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={closeOrgPicker}
-            aria-hidden="true"
-          />
-          <div className="pointer-events-auto relative z-10 w-[88%] max-w-[360px] rounded-3xl border border-white/12 bg-black/75 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.65)]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-white">
-                เลือกองค์กร
-              </h3>
+            </button>
+            {showFollowButton ? (
               <button
                 type="button"
-                onClick={closeOrgPicker}
-                className="rounded-full border border-white/10 bg-white/10 p-1 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                aria-label="ปิดรายการองค์กร"
+                onClick={handleFollowToggle}
+                disabled={!followLoaded || followBusy}
+                className={`${followButtonClasses} pointer-events-auto ${
+                  !followLoaded || followBusy
+                    ? "opacity-60 cursor-not-allowed"
+                    : ""
+                }`}
               >
-                <X className="h-4 w-4 text-white" />
+                {followBusy ? "..." : isFollowing ? "กำลังติดตาม" : "ติดตาม"}
               </button>
-            </div>
-            <p className="mt-1 text-sm text-white/60">
-              เลือกองค์กรเพื่อเปิดดูฟีด
-            </p>
-            <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
-              {orgDetails.map((org) => (
-                <button
-                  key={org._id}
-                  type="button"
-                  onClick={() => {
-                    closeOrgPicker();
-                    handleNavigateToOrganization(org._id);
-                  }}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-                >
-                  <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-black/40">
-                    {org.logo_url ? (
-                      <Image
-                        src={org.logo_url}
-                        alt={`โลโก้องค์กร ${org.name}`}
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <Building2 className="h-5 w-5 text-white/75" />
-                    )}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">
-                      {org.name}
-                    </p>
-                    {org.domains && org.domains.length > 0 ? (
-                      <p className="truncate text-xs text-white/50">
-                        {org.domains[0]}
-                        {org.domains.length > 1 ? " +" + (org.domains.length - 1) : ""}
-                      </p>
-                    ) : null}
-                  </div>
-                  <span className="text-xs font-medium text-white/60">
-                    ดูฟีด
-                  </span>
-                </button>
-              ))}
-            </div>
+            ) : null}
           </div>
-        </div>
-      ) : null}
-
-      {/* Scrubbable progress bar + thumbnail preview */}
-      <div
-        ref={progressBarRef}
-        className="absolute left-0 right-0 bottom-0 h-6 z-30 overflow-visible cursor-pointer touch-none"
-        onPointerDown={(e) => {
-          // Only left button or touch
-          if (typeof e.button === "number" && e.button !== 0) return;
-          (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-          const ratio = clientXToRatio(e.clientX);
-          beginScrub(ratio);
-        }}
-        onPointerMove={(e) => {
-          const ratio = clientXToRatio(e.clientX);
-          setHoverRatio(ratio);
-          if (!isScrubbing) return;
-          const v = videoRef.current;
-          if (!v) return;
-          const dur = isFinite(v.duration) ? v.duration : 0;
-          const t = dur * ratio;
-          setPreviewTime(t);
-          drawPreview(t);
-        }}
-        onPointerLeave={() => {
-          setHoverRatio(null);
-        }}
-        onPointerUp={(e) => {
-          if (!isScrubbing) return;
-          (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
-          const ratio = clientXToRatio(e.clientX);
-          endScrub(ratio);
-        }}
-      >
-        {/* Thin visible track anchored to bottom; larger wrapper keeps touch target comfortable */}
-        <div className="absolute left-0 right-0 bottom-0 h-0.5 sm:h-1 bg-white/10 rounded-full overflow-hidden">
-          <div
-            ref={progressInnerRef}
-            className="h-full bg-white/80 will-change-transform origin-left"
-            style={{ transform: "scaleX(0)" }}
-          />
+          {followError ? (
+            <p className="text-xs text-red-400">{followError}</p>
+          ) : null}
+          <p className="text-sm leading-snug">
+            {post.caption}{" "}
+            <span className="text-white/60">{post.tags.join(" ")}</span>
+          </p>
         </div>
 
-        {/* Hover/drag preview bubble */}
-        {isScrubbing && hoverRatio != null && (
+        <div className="absolute right-2 sm:right-4 top-2 sm:top-4 flex items-center gap-2 z-30">
           <div
-            className="absolute bottom-full mb-2 px-1 py-1 rounded-md bg-black/80 border border-white/10 shadow-lg backdrop-blur-sm select-none"
-            style={{
-              left: `${(hoverRatio || 0) * 100}%`,
-              transform: "translateX(-50%)",
-            }}
+            className="relative"
+            onPointerEnter={handleVolumePointerEnter}
+            onPointerLeave={handleVolumePointerLeave}
           >
-            <canvas
-              ref={previewCanvasRef}
-              width={previewSize.w}
-              height={previewSize.h}
-              style={{
-                width: previewSize.w,
-                height: previewSize.h,
-                display: "block",
-              }}
-            />
-            {previewTime != null && (
-              <div className="text-[10px] leading-none text-white/80 text-center mt-1">
-                {(() => {
-                  const t = Math.max(0, Math.floor(previewTime || 0));
-                  const mm = Math.floor(t / 60)
-                    .toString()
-                    .padStart(2, "0");
-                  const ss = (t % 60).toString().padStart(2, "0");
-                  return `${mm}:${ss}`;
-                })()}
+            <button
+              onClick={() => dispatch(toggleMuted())}
+              onPointerDown={handleVolumeButtonPointerDown}
+              className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+              aria-label={globalMuted ? "เปิดเสียงวิดีโอ" : "ปิดเสียงวิดีโอ"}
+            >
+              {globalMuted ? (
+                <VolumeX className="w-5 h-5" />
+              ) : (
+                <Volume2 className="w-5 h-5" />
+              )}
+            </button>
+            <div
+              className={`absolute right-0 mt-2 w-44 rounded-2xl border border-white/10 bg-black/80 p-3 shadow-2xl transition-all duration-200 ease-out backdrop-blur-sm ${
+                volumeTrayOpen
+                  ? "pointer-events-auto opacity-100 translate-y-0"
+                  : "pointer-events-none opacity-0 translate-y-1"
+              }`}
+            >
+              <div className="flex items-end gap-4">
+                <div
+                  ref={volumeBarRef}
+                  className="relative h-32 w-12 cursor-pointer"
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    volumePointerIdRef.current = e.pointerId;
+                    e.currentTarget.setPointerCapture?.(e.pointerId);
+                    handleSliderPointerDown(e.pointerType);
+                    setVolumeFromClientY(e.clientY);
+                  }}
+                >
+                  <div className="absolute inset-0 rounded-3xl border border-white/10 bg-white/5" />
+                  <div className="absolute inset-x-[9px] top-3 bottom-3 rounded-full bg-white/12 overflow-hidden">
+                    <div
+                      className="absolute inset-x-0 bottom-0 h-full origin-bottom rounded-full bg-gradient-to-t from-white via-white to-white/70"
+                      style={{ transform: `scaleY(${sliderRatio})` }}
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_75%)]" />
+                  </div>
+                  <div
+                    className="absolute left-1/2 h-3 w-3 -translate-x-1/2 rounded-full border border-black/30 bg-white shadow-[0_6px_16px_rgba(0,0,0,0.55)]"
+                    style={{
+                      bottom: `calc(${sliderRatio} * (100% - 24px) + 12px)`,
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-white/50">
+                    ระดับเสียง
+                  </span>
+                  <span className="text-base font-semibold text-white">
+                    {sliderValue}%
+                  </span>
+                </div>
               </div>
-            )}
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={sliderValue}
+                aria-label="ระดับเสียง"
+                className="sr-only"
+                onChange={(e) => {
+                  const next = Number(e.target.value) / 100;
+                  handleVolumeChange(next);
+                  openVolumeTray();
+                }}
+                onFocus={() => openVolumeTray()}
+                onBlur={() => scheduleVolumeTrayClose(400)}
+              />
+              <p className="mt-2 text-[11px] text-white/55">
+                ลากหรือแตะตัวเลื่อนเพื่อปรับระดับเสียง
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+          <button
+            onClick={() => isActive && setPlaying((v) => !v)}
+            className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60 disabled:opacity-50"
+            disabled={!isActive}
+          >
+            {playing ? (
+              <Pause className="w-5 h-5" />
+            ) : (
+              <Play className="w-5 h-5" />
+            )}
+          </button>
+          {isOwnPost && (
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="px-3 py-1.5 rounded-full bg-black/40 border border-white/10 hover:bg-black/60"
+                aria-label="เมนูเพิ่มเติม"
+              >
+                <MoreVertical className="w-5 h-5" />
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-white/10 bg-black/80 shadow-2xl backdrop-blur-sm overflow-hidden">
+                  <button
+                    onClick={handleDeleteClick}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">ลบวิดีโอ</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-      {/* Off-DOM hidden preview <video> is created lazily. No JSX element needed. */}
-    </article>
+        <ActionRail
+          postId={post.id}
+          interactions={post.interactions}
+          comments={post.comments}
+          saves={post.saves}
+          viewerReaction={post.viewer?.reaction ?? null}
+          viewerSaved={post.viewer?.saved ?? null}
+        />
+        {hasOrganizationVisibility ? (
+          <div className="pointer-events-none absolute left-2 sm:left-4 bottom-4 pr-20 z-30">
+            <div className="pointer-events-auto flex max-w-[78vw] sm:max-w-md items-center gap-2 rounded-full border border-white/12 bg-black/55 px-3 py-1.5 text-xs sm:text-sm backdrop-blur">
+              {orgLoading ? (
+                <span className="flex items-center gap-2 text-white/70">
+                  <span className="inline-flex h-3 w-3 animate-spin rounded-full border-2 border-white/35 border-t-transparent" />
+                  <span>กำลังโหลดองค์กร...</span>
+                </span>
+              ) : orgError ? (
+                <span className="text-red-300">โหลดข้อมูลองค์กรไม่สำเร็จ</span>
+              ) : primaryOrganization ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleNavigateToOrganization(primaryOrganization._id)
+                    }
+                    className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    title={primaryOrganization.name}
+                  >
+                    <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border border-white/20 bg-black/40">
+                      {primaryOrganization.logo_url ? (
+                        <Image
+                          src={primaryOrganization.logo_url}
+                          alt={`โลโก้องค์กร ${primaryOrganization.name}`}
+                          width={24}
+                          height={24}
+                          className="h-6 w-6 object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <Building2 className="h-4 w-4 text-white/75" />
+                      )}
+                    </span>
+                    <span className="max-w-[140px] truncate text-white">
+                      {primaryOrganization.name}
+                    </span>
+                  </button>
+                  {extraOrganizationCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setOrgPickerOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-2.5 py-1 text-white/80 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                      aria-label={`ดูองค์กรอื่นอีก ${extraOrganizationCount} แห่ง`}
+                    >
+                      +{extraOrganizationCount}
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-white/70">แชร์กับองค์กร</span>
+              )}
+            </div>
+          </div>
+        ) : null}
+        {orgPickerOpen && remainingOrganizations.length > 0 ? (
+          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+            <div
+              className="pointer-events-auto absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={closeOrgPicker}
+              aria-hidden="true"
+            />
+            <div className="pointer-events-auto relative z-10 w-[88%] max-w-[360px] rounded-3xl border border-white/12 bg-black/75 p-5 shadow-[0_20px_60px_rgba(0,0,0,0.65)]">
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-white">
+                  เลือกองค์กร
+                </h3>
+                <button
+                  type="button"
+                  onClick={closeOrgPicker}
+                  className="rounded-full border border-white/10 bg-white/10 p-1 transition hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  aria-label="ปิดรายการองค์กร"
+                >
+                  <X className="h-4 w-4 text-white" />
+                </button>
+              </div>
+              <p className="mt-1 text-sm text-white/60">
+                เลือกองค์กรเพื่อเปิดดูฟีด
+              </p>
+              <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
+                {orgDetails.map((org) => (
+                  <button
+                    key={org._id}
+                    type="button"
+                    onClick={() => {
+                      closeOrgPicker();
+                      handleNavigateToOrganization(org._id);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-black/40">
+                      {org.logo_url ? (
+                        <Image
+                          src={org.logo_url}
+                          alt={`โลโก้องค์กร ${org.name}`}
+                          width={40}
+                          height={40}
+                          className="h-10 w-10 object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <Building2 className="h-5 w-5 text-white/75" />
+                      )}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {org.name}
+                      </p>
+                      {org.domains && org.domains.length > 0 ? (
+                        <p className="truncate text-xs text-white/50">
+                          {org.domains[0]}
+                          {org.domains.length > 1
+                            ? " +" + (org.domains.length - 1)
+                            : ""}
+                        </p>
+                      ) : null}
+                    </div>
+                    <span className="text-xs font-medium text-white/60">
+                      ดูฟีด
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Scrubbable progress bar + thumbnail preview */}
+        <div
+          ref={progressBarRef}
+          className="absolute left-0 right-0 bottom-0 h-6 z-30 overflow-visible cursor-pointer touch-none"
+          onPointerDown={(e) => {
+            // Only left button or touch
+            if (typeof e.button === "number" && e.button !== 0) return;
+            (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+            const ratio = clientXToRatio(e.clientX);
+            beginScrub(ratio);
+          }}
+          onPointerMove={(e) => {
+            const ratio = clientXToRatio(e.clientX);
+            setHoverRatio(ratio);
+            if (!isScrubbing) return;
+            const v = videoRef.current;
+            if (!v) return;
+            const dur = isFinite(v.duration) ? v.duration : 0;
+            const t = dur * ratio;
+            setPreviewTime(t);
+            drawPreview(t);
+          }}
+          onPointerLeave={() => {
+            setHoverRatio(null);
+          }}
+          onPointerUp={(e) => {
+            if (!isScrubbing) return;
+            (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+            const ratio = clientXToRatio(e.clientX);
+            endScrub(ratio);
+          }}
+        >
+          {/* Thin visible track anchored to bottom; larger wrapper keeps touch target comfortable */}
+          <div className="absolute left-0 right-0 bottom-0 h-0.5 sm:h-1 bg-white/10 rounded-full overflow-hidden">
+            <div
+              ref={progressInnerRef}
+              className="h-full bg-white/80 will-change-transform origin-left"
+              style={{ transform: "scaleX(0)" }}
+            />
+          </div>
+
+          {/* Hover/drag preview bubble */}
+          {isScrubbing && hoverRatio != null && (
+            <div
+              className="absolute bottom-full mb-2 px-1 py-1 rounded-md bg-black/80 border border-white/10 shadow-lg backdrop-blur-sm select-none"
+              style={{
+                left: `${(hoverRatio || 0) * 100}%`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              <canvas
+                ref={previewCanvasRef}
+                width={previewSize.w}
+                height={previewSize.h}
+                style={{
+                  width: previewSize.w,
+                  height: previewSize.h,
+                  display: "block",
+                }}
+              />
+              {previewTime != null && (
+                <div className="text-[10px] leading-none text-white/80 text-center mt-1">
+                  {(() => {
+                    const t = Math.max(0, Math.floor(previewTime || 0));
+                    const mm = Math.floor(t / 60)
+                      .toString()
+                      .padStart(2, "0");
+                    const ss = (t % 60).toString().padStart(2, "0");
+                    return `${mm}:${ss}`;
+                  })()}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Off-DOM hidden preview <video> is created lazily. No JSX element needed. */}
+      </article>
+
+      {/* Delete confirmation modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteVideo}
+        title="ลบวิดีโอ"
+        message="คุณแน่ใจหรือไม่ว่าต้องการลบวิดีโอนี้? การกระทำนี้ไม่สามารถย้อนกลับได้"
+        type="confirm"
+        confirmText={deleteLoading ? "กำลังลบ..." : "ลบวิดีโอ"}
+        cancelText="ยกเลิก"
+      />
+
+      {/* Error modal */}
+      {deleteError && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDeleteError(null)}
+          title="เกิดข้อผิดพลาด"
+          message={deleteError}
+          type="error"
+          confirmText="ตกลง"
+        />
+      )}
+    </>
   );
 }

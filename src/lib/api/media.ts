@@ -36,17 +36,24 @@ export async function uploadVideo({
   formData.append("allowComments", String(allowComments));
   orgIds?.forEach((id) => formData.append("orgIds", id));
 
-  const response = await axios.post<UploadVideoResponse>(url.toString(), formData, {
-    withCredentials: true,
-    headers: { "Content-Type": "multipart/form-data" },
-    signal,
-    onUploadProgress: (event) => {
-      if (event.total) {
-        const percent = Math.min(100, Math.max(0, Math.round((event.loaded / event.total) * 100)));
-        onUploadProgress?.(percent, event);
-      }
-    },
-  });
+  const response = await axios.post<UploadVideoResponse>(
+    url.toString(),
+    formData,
+    {
+      withCredentials: true,
+      headers: { "Content-Type": "multipart/form-data" },
+      signal,
+      onUploadProgress: (event) => {
+        if (event.total) {
+          const percent = Math.min(
+            100,
+            Math.max(0, Math.round((event.loaded / event.total) * 100))
+          );
+          onUploadProgress?.(percent, event);
+        }
+      },
+    }
+  );
 
   return response.data;
 }
@@ -68,6 +75,25 @@ export async function uploadProfileImage(
       signal,
     }
   );
+
+  return response.data;
+}
+
+export interface DeleteVideoResponse {
+  message: string;
+  postId: string;
+}
+
+export async function deleteVideo(
+  postId: string,
+  { signal }: { signal?: AbortSignal } = {}
+): Promise<DeleteVideoResponse> {
+  const url = buildApiUrl(`media/video/${postId}`);
+
+  const response = await axios.delete<DeleteVideoResponse>(url.toString(), {
+    withCredentials: true,
+    signal,
+  });
 
   return response.data;
 }
