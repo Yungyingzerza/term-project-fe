@@ -28,6 +28,7 @@ import {
   Play,
   Sparkles,
   User,
+  CheckCircle,
 } from "lucide-react";
 
 const TRENDING_TAGS: string[] = [
@@ -402,17 +403,22 @@ export default function ExplorePage() {
             loading="lazy"
             unoptimized
           />
-          <div className="min-w-0">
-            <p className="text-sm font-semibold line-clamp-1">{item.name}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <p className="text-sm font-semibold line-clamp-1">{item.name}</p>
+              {item.isWorkOrg && (
+                <CheckCircle className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              )}
+            </div>
             <p className="text-xs text-white/70 line-clamp-1">
-              องค์กรพาร์ทเนอร์ในชุมชน
+              {item.isWorkOrg ? "องค์กรที่ได้รับการยืนยัน" : "กลุ่มในชุมชน"}
             </p>
           </div>
         </div>
         <div className="flex items-center justify-between">
           <span className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-white/10 border border-white/10 uppercase tracking-wide text-white/80">
             <Building2 className="w-3 h-3" />
-            องค์กร
+            {item.isWorkOrg ? "องค์กร" : "กลุ่ม"}
           </span>
           <span className="text-[11px] text-white/60">เยี่ยมชม →</span>
         </div>

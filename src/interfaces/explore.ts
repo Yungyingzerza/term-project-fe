@@ -18,6 +18,7 @@ export interface ExploreOrganizationResult {
   id: string;
   name: string;
   logoUrl: string;
+  isWorkOrg: boolean;
 }
 
 export interface ExplorePostUser {
