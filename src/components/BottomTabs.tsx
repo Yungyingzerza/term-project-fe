@@ -23,7 +23,34 @@ export default function BottomTabs() {
     Array<{ label: string; link: string }>
   >([]);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggered = useRef(false);
+  const hoveredKeyRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+  const touchStartedOnMainRef = useRef(false);
+  const movedOffMainRef = useRef(false);
+  const closeTimer = useRef<NodeJS.Timeout | null>(null);
+  const canHoverRef = useRef(true);
+
+  // Detect if device supports hover
+  useEffect(() => {
+    try {
+      const hasHover =
+        typeof window !== "undefined" &&
+        !!(
+          (window.matchMedia &&
+            window.matchMedia("(any-hover: hover)").matches) ||
+          (window.matchMedia && window.matchMedia("(hover: hover)").matches) ||
+          (window.matchMedia &&
+            window.matchMedia("(any-pointer: fine)").matches) ||
+          (window.matchMedia && window.matchMedia("(pointer: fine)").matches)
+        );
+      canHoverRef.current = hasHover;
+    } catch {
+      canHoverRef.current = true;
+    }
+  }, []);
 
   const tabsBase = [
     { icon: Home, label: "หน้าหลัก", link: "/" },
@@ -92,13 +119,16 @@ export default function BottomTabs() {
     e: React.TouchEvent | React.MouseEvent,
     tabLabel: string
   ) => {
-    e.preventDefault();
+    longPressTriggered.current = false;
+    touchStartedOnMainRef.current = true;
+    movedOffMainRef.current = false;
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = rect.left + rect.width / 2;
     const y = rect.top;
 
     longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
       let items: Array<{ label: string; link: string }> = [];
 
       if (tabLabel === "หน้าหลัก") {
@@ -134,7 +164,14 @@ export default function BottomTabs() {
           navigator.vibrate(50);
         }
       }
-    }, 500); // 500ms long press
+    }, 300); // 300ms long press
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   // Handle long press end
@@ -143,19 +180,85 @@ export default function BottomTabs() {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+
+    // Only auto-navigate if user dragged over a menu item
+    // Otherwise keep menu open for clicking
+    if (showMenu && hoveredKeyRef.current !== null && movedOffMainRef.current) {
+      const selectedItem = menuItems[hoveredKeyRef.current];
+      if (selectedItem) {
+        handleMenuItemClick(selectedItem.link);
+      }
+    }
+
+    // Clear hover state but keep menu open
+    hoveredKeyRef.current = null;
+    setHoveredItemIndex(null);
+
+    // Suppress the click only if long-press ended on main button (no drag)
+    suppressClickRef.current =
+      touchStartedOnMainRef.current && !movedOffMainRef.current;
+    touchStartedOnMainRef.current = false;
+    movedOffMainRef.current = false;
+  };
+
+  const handleTouchCancel = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    hoveredKeyRef.current = null;
+    setHoveredItemIndex(null);
+    longPressTriggered.current = false;
+    setShowMenu(false);
+    touchStartedOnMainRef.current = false;
+    movedOffMainRef.current = false;
+  };
+
+  // Handle mouse/touch move to detect hover over menu items
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!longPressTriggered.current) return;
+
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+
+    const el = document.elementFromPoint(
+      t.clientX,
+      t.clientY
+    ) as HTMLElement | null;
+    const btn = el?.closest("button[data-menu-index]") as HTMLElement | null;
+    const index = btn ? parseInt(btn.dataset?.menuIndex || "-1") : -1;
+    const validIndex = index >= 0 ? index : null;
+
+    if (hoveredKeyRef.current !== validIndex) {
+      hoveredKeyRef.current = validIndex;
+      setHoveredItemIndex(validIndex);
+    }
+
+    if (validIndex !== null) {
+      movedOffMainRef.current = true;
+    }
   };
 
   // Handle menu item click
   const handleMenuItemClick = (link: string) => {
     setShowMenu(false);
-    handleNavigation(link);
+    // Use setTimeout to ensure navigation happens after menu closes
+    setTimeout(() => {
+      handleNavigation(link);
+    }, 0);
   };
 
   // Close menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = () => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (showMenu) {
-        setShowMenu(false);
+        // Check if click is outside the menu
+        const target = e.target as HTMLElement;
+        if (!target.closest(".long-press-menu")) {
+          setShowMenu(false);
+          setHoveredItemIndex(null);
+          hoveredKeyRef.current = null;
+        }
       }
     };
 
@@ -176,7 +279,7 @@ export default function BottomTabs() {
       {showMenu && (
         <div className="fixed inset-0 z-50" style={{ pointerEvents: "auto" }}>
           <div
-            className="absolute bg-neutral-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 overflow-hidden"
+            className="long-press-menu absolute bg-neutral-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 overflow-hidden"
             style={{
               left: `${menuPosition.x}px`,
               bottom: `calc(100vh - ${menuPosition.y}px + 10px)`,
@@ -188,14 +291,27 @@ export default function BottomTabs() {
             {menuItems.map((item, index) => (
               <button
                 key={item.link}
+                data-menu-index={index}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleMenuItemClick(item.link);
                 }}
+                onMouseEnter={() => {
+                  if (canHoverRef.current) {
+                    setHoveredItemIndex(index);
+                  }
+                }}
+                onMouseLeave={() => {
+                  if (canHoverRef.current) {
+                    setHoveredItemIndex(null);
+                  }
+                }}
                 className={classNames(
-                  "w-full px-4 py-2.5 text-left text-xs transition-colors whitespace-nowrap",
-                  "hover:bg-white/10 active:bg-white/20",
-                  pathname === item.link
+                  "menu-item-button w-full px-4 py-2.5 text-left text-xs transition-colors whitespace-nowrap",
+                  hoveredItemIndex === index
+                    ? "bg-white/20 text-white font-semibold"
+                    : "hover:bg-white/10 active:bg-white/20",
+                  pathname === item.link && hoveredItemIndex !== index
                     ? "text-white font-semibold"
                     : "text-white/80",
                   index !== menuItems.length - 1 && "border-b border-white/5"
@@ -224,7 +340,110 @@ export default function BottomTabs() {
 
             const hasLongPress = label === "หน้าหลัก" || label === "โปรไฟล์";
 
-            return (
+            return hasLongPress ? (
+              <div
+                key={label}
+                className="relative"
+                onMouseEnter={() => {
+                  if (!canHoverRef.current) return;
+                  if (closeTimer.current) clearTimeout(closeTimer.current);
+                }}
+                onMouseLeave={() => {
+                  if (closeTimer.current) clearTimeout(closeTimer.current);
+                  closeTimer.current = setTimeout(
+                    () => setShowMenu(false),
+                    120
+                  );
+                }}
+                onTouchStart={() => {
+                  touchStartedOnMainRef.current = true;
+                  movedOffMainRef.current = false;
+                }}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={(e) => {
+                  if (!longPressTriggered.current) return;
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  const key = hoveredKeyRef.current;
+                  // Only auto-navigate if user dragged to a menu item
+                  if (
+                    key !== null &&
+                    menuItems[key] &&
+                    movedOffMainRef.current
+                  ) {
+                    handleMenuItemClick(menuItems[key].link);
+                  }
+                  // Otherwise keep menu open for clicking
+
+                  hoveredKeyRef.current = null;
+                  setHoveredItemIndex(null);
+                  suppressClickRef.current =
+                    touchStartedOnMainRef.current && !movedOffMainRef.current;
+                  touchStartedOnMainRef.current = false;
+                  movedOffMainRef.current = false;
+                }}
+                onTouchCancel={handleTouchCancel}
+              >
+                <button
+                  onClick={() => {
+                    if (suppressClickRef.current) {
+                      suppressClickRef.current = false;
+                      return;
+                    }
+
+                    if (external) {
+                      try {
+                        window.location.href = link;
+                      } catch {
+                        handleNavigation("/");
+                      }
+                    } else {
+                      handleNavigation(link);
+                    }
+                    if (showMenu) setShowMenu(false);
+                  }}
+                  onMouseDown={(e) => handleLongPressStart(e, label)}
+                  onMouseUp={cancelLongPress}
+                  onMouseLeave={cancelLongPress}
+                  onTouchStart={(e) => handleLongPressStart(e, label)}
+                  onTouchEnd={cancelLongPress}
+                  onTouchCancel={cancelLongPress}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onMouseEnter={() => {
+                    if (!canHoverRef.current) return;
+                    if (closeTimer.current) clearTimeout(closeTimer.current);
+                    // Open menu on hover for desktop
+                    const mockEvent = {
+                      currentTarget: {
+                        getBoundingClientRect: () => ({
+                          left: 0,
+                          top: 0,
+                          width: 48,
+                          height: 48,
+                        }),
+                      },
+                    } as React.MouseEvent;
+                    handleLongPressStart(mockEvent, label);
+                    longPressTriggered.current = true;
+                  }}
+                  className="flex flex-col items-center gap-0.5 text-[11px] relative"
+                >
+                  <Icon
+                    className={classNames("w-5 h-5", isActive && "text-white")}
+                  />
+                  <span
+                    className={classNames(
+                      "",
+                      isActive ? "text-white" : "text-white/60"
+                    )}
+                  >
+                    {label}
+                  </span>
+                  <div className="absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-blue-400/50" />
+                </button>
+              </div>
+            ) : (
               <button
                 key={label}
                 onClick={() => {
@@ -232,27 +451,12 @@ export default function BottomTabs() {
                     try {
                       window.location.href = link;
                     } catch {
-                      // fallback: navigate to profile (middleware will redirect)
                       handleNavigation("/");
                     }
                   } else {
                     handleNavigation(link);
                   }
                 }}
-                onTouchStart={
-                  hasLongPress
-                    ? (e) => handleLongPressStart(e, label)
-                    : undefined
-                }
-                onTouchEnd={hasLongPress ? handleLongPressEnd : undefined}
-                onTouchCancel={hasLongPress ? handleLongPressEnd : undefined}
-                onMouseDown={
-                  hasLongPress
-                    ? (e) => handleLongPressStart(e, label)
-                    : undefined
-                }
-                onMouseUp={hasLongPress ? handleLongPressEnd : undefined}
-                onMouseLeave={hasLongPress ? handleLongPressEnd : undefined}
                 className="flex flex-col items-center gap-0.5 text-[11px] relative"
               >
                 <Icon
@@ -266,9 +470,6 @@ export default function BottomTabs() {
                 >
                   {label}
                 </span>
-                {hasLongPress && (
-                  <div className="absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-blue-400/50" />
-                )}
               </button>
             );
           })}
