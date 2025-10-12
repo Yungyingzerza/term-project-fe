@@ -7,6 +7,26 @@
 
 body {
   font-family: inherit;
+  /* Prevent text selection on mobile while allowing on desktop */
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+/Edge */
+  user-select: none; /* Standard */
+  /* Prevent tap highlight on mobile */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent callout on long-press */
+  -webkit-touch-callout: none;
+}
+
+/* Allow text selection for specific elements where it makes sense */
+input,
+textarea,
+[contenteditable="true"],
+.selectable-text {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 /* Local keyframes for the reaction burst so we don't rely on Tailwind's built-in ping */
