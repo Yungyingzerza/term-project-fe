@@ -137,7 +137,7 @@ export default function UploadPage() {
   };
 
   const hashtagSuggestions = [
-    "#ชิลชิล",
+    "#ชิวชิว",
     "#เอไอ",
     "#โค้ดดิ้ง",
     "#ท่องเที่ยว",

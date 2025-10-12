@@ -6,8 +6,8 @@ import Sidebar from "@/components/Sidebar";
 import BottomTabs from "@/components/BottomTabs";
 
 export const metadata: Metadata = {
-  title: "กลุ่ม - ชิลชิล",
-  description: "จัดการกลุ่มและชุมชนของคุณ",
+  title: "กลุ่ม - ชิวชิว",
+  description: "จัดการและเข้าร่วมกลุ่มของคุณ",
 };
 
 export default function GroupsPage() {

@@ -76,7 +76,7 @@ export default function TopBar() {
           <div className="w-7 h-7 rounded-lg bg-white text-black grid place-items-center">
             CC
           </div>
-          <span className="hidden sm:inline">ชิลชิล</span>
+          <span className="hidden sm:inline">ชิวชิว</span>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
           <form onSubmit={handleSearchSubmit} className="group relative">

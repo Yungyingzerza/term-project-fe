@@ -323,7 +323,7 @@ export default function ExplorePage() {
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 via-black/10 to-transparent space-y-1">
             <p className="text-sm font-semibold line-clamp-2">
-              {item.caption || "วิดีโอจากชุมชนชิลชิล"}
+              {item.caption || "วิดีโอจากชุมชนชิวชิว"}
             </p>
             <p className="text-[11px] text-white/80">
               @{viewerHandle || "creator"}
