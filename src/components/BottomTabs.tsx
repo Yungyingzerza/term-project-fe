@@ -125,7 +125,8 @@ export default function BottomTabs() {
 
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = rect.left + rect.width / 2;
-    const y = rect.top;
+    // Calculate distance from bottom of viewport instead of top
+    const bottomDistance = window.innerHeight - rect.top;
 
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
@@ -156,7 +157,7 @@ export default function BottomTabs() {
         );
 
         setMenuItems(items);
-        setMenuPosition({ x: clampedX, y });
+        setMenuPosition({ x: clampedX, y: bottomDistance });
         setShowMenu(true);
 
         // Haptic feedback if available
@@ -277,12 +278,12 @@ export default function BottomTabs() {
     <>
       {/* Long-press menu */}
       {showMenu && (
-        <div className="fixed inset-0 z-50" style={{ pointerEvents: "auto" }}>
+        <div className="fixed inset-0 z-[60]" style={{ pointerEvents: "auto" }}>
           <div
             className="long-press-menu absolute bg-neutral-900/95 backdrop-blur-xl rounded-xl shadow-2xl border border-white/10 overflow-hidden"
             style={{
               left: `${menuPosition.x}px`,
-              bottom: `calc(100vh - ${menuPosition.y}px + 10px)`,
+              bottom: `${menuPosition.y + 8}px`,
               transform: "translateX(-50%)",
               minWidth: "120px",
               maxWidth: "140px",
