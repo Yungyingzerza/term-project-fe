@@ -33,7 +33,6 @@ export default function Sidebar() {
   const itemsBase = [
     { icon: Home, label: "เพื่อคุณ", link: "/" },
     { icon: Users, label: "กำลังติดตาม", link: "/following" },
-    { icon: Radio, label: "ไลฟ์สด", link: "/live" },
     { icon: Compass, label: "สำรวจ", link: "/explore" },
     { icon: MessageCircle, label: "ข้อความ", link: "/messages" },
     {
