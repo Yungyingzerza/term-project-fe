@@ -65,16 +65,6 @@ export default function Sidebar() {
       }}
     >
       <div className="p-4 w-full overflow-y-auto scroll-smoothbar flex flex-col">
-        <div className="flex items-center gap-2 px-2 py-3 rounded-xl bg-white/5 border border-white/10 shrink-0 mb-4">
-          <Image
-            src="/apple-touch-icon.png"
-            alt="ChillChill Logo"
-            width={24}
-            height={24}
-            className="w-6 h-6 rounded"
-          />
-          <span className="font-semibold text-lg">ชิวชิว</span>
-        </div>
         <div className="flex items-center gap-2 px-2 py-3 rounded-xl bg-white/5 border border-white/10 shrink-0">
           <Sparkles className="w-5 h-5" />
           <span className="font-semibold">ค้นพบ</span>

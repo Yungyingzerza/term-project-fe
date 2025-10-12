@@ -73,9 +73,13 @@ export default function TopBar() {
           onClick={() => handleNavigation("/")}
           className="cursor-pointer flex items-center gap-2 font-extrabold text-lg"
         >
-          <div className="w-7 h-7 rounded-lg bg-white text-black grid place-items-center">
-            CC
-          </div>
+          <Image
+            src="/apple-touch-icon.png"
+            alt="ChillChill Logo"
+            width={28}
+            height={28}
+            className="w-7 h-7 rounded-lg"
+          />
           <span className="hidden sm:inline">ชิวชิว</span>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
