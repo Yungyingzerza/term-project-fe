@@ -133,10 +133,11 @@ export default function BottomTabs() {
       let items: Array<{ label: string; link: string }> = [];
 
       if (tabLabel === "หน้าหลัก") {
-        items = [
-          { label: "หน้าหลัก", link: "/" },
-          { label: "กำลังติดตาม", link: "/following" },
-        ];
+        items = [{ label: "หน้าหลัก", link: "/" }];
+        // Only show "Following" option if user is logged in
+        if (isLoggedIn) {
+          items.push({ label: "กำลังติดตาม", link: "/following" });
+        }
       } else if (tabLabel === "โปรไฟล์") {
         items = [
           {

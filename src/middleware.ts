@@ -144,7 +144,10 @@ export async function middleware(req: NextRequest) {
           const setCookieValues = getSetCookieValues(res.headers);
 
           const newAccessToken = extractCookie(setCookieValues, "accessToken");
-          const newRefreshToken = extractCookie(setCookieValues, "refreshToken");
+          const newRefreshToken = extractCookie(
+            setCookieValues,
+            "refreshToken"
+          );
 
           if (!newAccessToken || !newRefreshToken) {
             const response = NextResponse.next();
@@ -171,7 +174,7 @@ export async function middleware(req: NextRequest) {
     return response;
   }
 
-  const protectedRoutes = ["/settings", "/messages"];
+  const protectedRoutes = ["/settings", "/messages", "/following"];
 
   const isProtected = protectedRoutes.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
@@ -187,5 +190,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/settings/:path*", "/messages/:path*"],
+  matcher: ["/", "/settings/:path*", "/messages/:path*", "/following/:path*"],
 };
