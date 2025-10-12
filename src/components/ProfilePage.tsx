@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import TopBar from "./TopBar";
 import Sidebar from "./Sidebar";
 import BottomTabs from "./BottomTabs";
@@ -33,7 +34,9 @@ import {
   Bookmark,
   History,
   Loader2,
+  MessageCircle,
 } from "lucide-react";
+import { createConversation } from "@/lib/api/messages";
 
 type MiniPost = {
   id: string;
@@ -75,6 +78,7 @@ export default function ProfilePage({
 }: ProfilePageProps) {
   const ambientColor = useAppSelector((s) => s.player.ambientColor);
   const user = useAppSelector((s) => s.user);
+  const router = useRouter();
   const profileUser = profile?.user;
   const displayName =
     profileUser?.username || author?.name || user?.username || "ครีเอเตอร์";
@@ -88,6 +92,7 @@ export default function ProfilePage({
     author?.avatar ||
     user?.picture_url ||
     "https://i.pravatar.cc/100?img=1";
+  const profileUserId = profileUser?._id ?? "";
 
   const [isFollowing, setIsFollowing] = useState<boolean>(
     Boolean(profile?.is_following)
@@ -108,6 +113,8 @@ export default function ProfilePage({
 
   // Pagination states for videos
   const [videoItems, setVideoItems] = useState<PostItem[]>(items ?? []);
+  const [messageBusy, setMessageBusy] = useState<boolean>(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
   const [videoCursor, setVideoCursor] = useState(
     videoPaging?.nextCursor ?? null
   );
@@ -164,6 +171,26 @@ export default function ProfilePage({
     if (!profileUser?._id || !user?.id) return false;
     return profileUser._id === user.id;
   }, [profileUser?._id, user?.id]);
+
+  const handleStartConversation = useCallback(async () => {
+    if (!profileUserId) return;
+    try {
+      setMessageBusy(true);
+      setMessageError(null);
+      const conversation = await createConversation({
+        userIds: [profileUserId],
+      });
+      if (!conversation.id) {
+        throw new Error("Missing conversation identifier");
+      }
+      router.push(`/messages?conversationId=${conversation.id}`);
+    } catch (error) {
+      console.error("Failed to start conversation", error);
+      setMessageError("ไม่สามารถเริ่มการสนทนาได้");
+    } finally {
+      setMessageBusy(false);
+    }
+  }, [profileUserId, router]);
 
   const handleFollowClick = useCallback(async () => {
     if (!profileUser?._id) return;
@@ -685,6 +712,22 @@ export default function ProfilePage({
                 {!isSelfProfile ? (
                   <div className="hidden sm:flex items-center gap-2">
                     <button
+                      disabled={messageBusy || !profileUserId}
+                      onClick={handleStartConversation}
+                      className={`px-3 py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 transition bg-white/10 border border-white/10 hover:bg-white/15 ${
+                        messageBusy
+                          ? "opacity-70 cursor-not-allowed"
+                          : "cursor-pointer"
+                      }`}
+                    >
+                      {messageBusy ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <MessageCircle className="w-4 h-4" />
+                      )}
+                      ส่งข้อความ
+                    </button>
+                    <button
                       disabled={followBusy || !profileUser?._id}
                       onClick={handleFollowClick}
                       className={`px-3 py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 transition ${
@@ -722,6 +765,24 @@ export default function ProfilePage({
                     >
                       {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
                     </button>
+                    <button
+                      disabled={messageBusy || !profileUserId}
+                      onClick={handleStartConversation}
+                      className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold bg-white/10 border border-white/10 text-white/90 transition ${
+                        messageBusy
+                          ? "opacity-70 cursor-not-allowed"
+                          : "cursor-pointer hover:bg-white/15"
+                      }`}
+                    >
+                      <span className="inline-flex items-center gap-1.5 justify-center">
+                        {messageBusy ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <MessageCircle className="w-4 h-4" />
+                        )}
+                        ส่งข้อความ
+                      </span>
+                    </button>
                     <button className="rounded-xl px-3 py-2 text-sm font-medium bg-white/10 border border-white/10 text-white/90 hover:bg-white/15">
                       แชร์
                     </button>
@@ -730,6 +791,9 @@ export default function ProfilePage({
               </div>
               {followError ? (
                 <p className="mt-3 text-xs text-rose-400">{followError}</p>
+              ) : null}
+              {messageError ? (
+                <p className="mt-1 text-xs text-rose-400">{messageError}</p>
               ) : null}
 
               {/* Tabs */}

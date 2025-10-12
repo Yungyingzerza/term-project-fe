@@ -8,3 +8,4 @@ export * from "./comments";
 export * from "./organization";
 export * from "./media";
 export * from "./explore";
+export * from "./messages";
