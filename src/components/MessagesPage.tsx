@@ -513,8 +513,8 @@ export default function MessagesPage() {
       <div className="relative z-10 flex flex-1">
         <Sidebar />
 
-        <main className="flex-1 pb-24 md:pb-6 md:ml-64 flex flex-col">
-          <section className="w-full px-4 lg:px-6 py-6 flex-1 flex flex-col">
+        <main className="flex-1 pb-24 md:pb-6 md:ml-64 flex flex-col min-h-0">
+          <section className="w-full px-4 lg:px-6 py-6 flex-1 flex flex-col min-h-0">
             <div
               className={`${
                 showChatOnMobile ? "hidden lg:flex" : "flex"
@@ -526,11 +526,11 @@ export default function MessagesPage() {
               <h1 className="text-xl sm:text-2xl font-extrabold">ข้อความ</h1>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] gap-5 flex-1 min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] xl:grid-cols-[420px_1fr] gap-5 flex-1 min-h-0 overflow-hidden">
               <div
                 className={`rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm overflow-hidden ${
                   showChatOnMobile ? "hidden lg:flex" : "flex"
-                } flex-col`}
+                } flex-col h-full`}
               >
                 <div className="p-4 border-b border-white/10 shrink-0">
                   <div className="group relative">
@@ -616,7 +616,7 @@ export default function MessagesPage() {
               <div
                 className={`rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm overflow-hidden ${
                   showChatOnMobile ? "flex" : "hidden lg:flex"
-                } flex-col`}
+                } flex-col h-full`}
               >
                 <div className="px-4 py-3 border-b border-white/10 flex items-center gap-3 shrink-0">
                   <button
@@ -663,7 +663,7 @@ export default function MessagesPage() {
 
                 <div
                   ref={listRef}
-                  className="flex-1 overflow-y-auto px-4 py-4 space-y-2 scroll-smoothbar"
+                  className="flex-1 basis-0 min-h-0 overflow-y-auto px-4 py-4 space-y-2 scroll-smoothbar"
                 >
                   {activeConversation ? (
                     <>
