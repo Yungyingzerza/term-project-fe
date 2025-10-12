@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useGroupManagement } from "@/hooks/useGroupManagement";
 import { useGroupInvites } from "@/hooks/useGroupInvites";
 import { useGroupMembers } from "@/hooks/useGroupMembers";
@@ -295,9 +296,11 @@ export function GroupManagement({
             <div className="space-y-3">
               <div className="flex items-start gap-4">
                 {organization.logo_url ? (
-                  <img
+                  <Image
                     src={organization.logo_url}
                     alt={organization.name}
+                    width={64}
+                    height={64}
                     className="w-16 h-16 rounded-xl object-cover border border-white/10"
                   />
                 ) : (
@@ -482,9 +485,11 @@ export function GroupManagement({
                 >
                   <div className="flex items-center gap-3">
                     {member.user_id.profile_picture_url ? (
-                      <img
+                      <Image
                         src={member.user_id.profile_picture_url}
                         alt={member.user_id.username}
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded-xl object-cover border border-white/10"
                       />
                     ) : (

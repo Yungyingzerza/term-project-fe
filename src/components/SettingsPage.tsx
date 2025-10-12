@@ -380,9 +380,11 @@ export default function SettingsPage() {
                         >
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             {org.logo_url ? (
-                              <img
+                              <Image
                                 src={org.logo_url}
                                 alt={org.name}
+                                width={32}
+                                height={32}
                                 className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0"
                               />
                             ) : (

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import ChillChill from "@/components/ChillChill";
 import type { PostItem } from "@/interfaces";
 import { getFeed, getPostById } from "@/lib/api/feed";
+import type { FeedAlgo } from "@/lib/api/feed";
 
 interface PageProps {
   params: Promise<{
@@ -95,7 +96,7 @@ export default async function FeedPostPage(props: PageProps) {
   let additionalItems: PostItem[] = [];
   let nextCursor: string | null = null;
   let hasMore = false;
-  let algo: "for-you" | "following" = "for-you";
+  let algo: FeedAlgo = "for-you";
 
   try {
     const feed = await getFeed({

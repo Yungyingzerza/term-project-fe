@@ -6,6 +6,7 @@ import TopBar from "@/components/TopBar";
 import Sidebar from "@/components/Sidebar";
 import BottomTabs from "@/components/BottomTabs";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 
 interface PageProps {
@@ -117,9 +118,11 @@ export default async function GroupSettingsPage(props: PageProps) {
             </Link>
             <div className="flex items-center gap-4">
               {organization.logo_url ? (
-                <img
+                <Image
                   src={organization.logo_url}
                   alt={organization.name}
+                  width={56}
+                  height={56}
                   className="w-14 h-14 rounded-2xl object-cover border border-white/10"
                 />
               ) : (

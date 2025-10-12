@@ -178,14 +178,21 @@ export default function BottomTabs() {
   };
 
   // Handle long press end
-  const handleLongPressEnd = () => {
+  const handleLongPressEnd = (event?: React.TouchEvent) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
 
-    // Only auto-navigate if user dragged over a menu item
-    // Otherwise keep menu open for clicking
+    if (!longPressTriggered.current) {
+      touchStartedOnMainRef.current = false;
+      movedOffMainRef.current = false;
+      return;
+    }
+
+    event?.preventDefault();
+    event?.stopPropagation();
+
     if (showMenu && hoveredKeyRef.current !== null && movedOffMainRef.current) {
       const selectedItem = menuItems[hoveredKeyRef.current];
       if (selectedItem) {
@@ -193,15 +200,14 @@ export default function BottomTabs() {
       }
     }
 
-    // Clear hover state but keep menu open
     hoveredKeyRef.current = null;
     setHoveredItemIndex(null);
 
-    // Suppress the click only if long-press ended on main button (no drag)
     suppressClickRef.current =
       touchStartedOnMainRef.current && !movedOffMainRef.current;
     touchStartedOnMainRef.current = false;
     movedOffMainRef.current = false;
+    longPressTriggered.current = false;
   };
 
   const handleTouchCancel = () => {
@@ -364,29 +370,7 @@ export default function BottomTabs() {
                   movedOffMainRef.current = false;
                 }}
                 onTouchMove={handleTouchMove}
-                onTouchEnd={(e) => {
-                  if (!longPressTriggered.current) return;
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  const key = hoveredKeyRef.current;
-                  // Only auto-navigate if user dragged to a menu item
-                  if (
-                    key !== null &&
-                    menuItems[key] &&
-                    movedOffMainRef.current
-                  ) {
-                    handleMenuItemClick(menuItems[key].link);
-                  }
-                  // Otherwise keep menu open for clicking
-
-                  hoveredKeyRef.current = null;
-                  setHoveredItemIndex(null);
-                  suppressClickRef.current =
-                    touchStartedOnMainRef.current && !movedOffMainRef.current;
-                  touchStartedOnMainRef.current = false;
-                  movedOffMainRef.current = false;
-                }}
+                onTouchEnd={handleLongPressEnd}
                 onTouchCancel={handleTouchCancel}
               >
                 <button

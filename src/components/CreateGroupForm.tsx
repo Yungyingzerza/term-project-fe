@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGroupManagement } from "@/hooks/useGroupManagement";
 import { Check, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import Image from "next/image";
 
 interface CreateGroupFormProps {
   onSuccess?: (organizationId: string) => void;
@@ -13,7 +14,12 @@ export function CreateGroupForm({ onSuccess, onCancel }: CreateGroupFormProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoPreviewError, setLogoPreviewError] = useState(false);
   const { createGroup, isLoading, error } = useGroupManagement();
+
+  useEffect(() => {
+    setLogoPreviewError(false);
+  }, [logoUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,16 +122,16 @@ export function CreateGroupForm({ onSuccess, onCancel }: CreateGroupFormProps) {
             />
             <ImageIcon className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
           </div>
-          {logoUrl && (
+          {logoUrl && !logoPreviewError && (
             <div className="mt-3 flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
               <span className="text-sm text-white/60">ตัวอย่าง:</span>
-              <img
+              <Image
                 src={logoUrl}
                 alt="Logo preview"
+                width={48}
+                height={48}
                 className="w-12 h-12 object-cover rounded-lg border border-white/10"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+                onError={() => setLogoPreviewError(true)}
               />
             </div>
           )}
