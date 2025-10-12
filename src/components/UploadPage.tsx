@@ -147,11 +147,11 @@ export default function UploadPage() {
 
   return (
     <>
-      <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+      <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overscroll-none pt-14">
         {/* Ambient overlay to match ModernTok */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
+          className="pointer-events-none fixed inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
           style={{
             backgroundColor: ambientColor,
             opacity: 0.5,
@@ -164,7 +164,7 @@ export default function UploadPage() {
         <div className="relative z-10 flex flex-1">
           <Sidebar />
 
-          <main className="flex-1">
+          <main className="flex-1 pb-24 md:pb-6 md:ml-64">
             <section className="max-w-7xl mx-auto px-4 py-6">
               {/* Header */}
               <div className="flex items-center gap-2 mb-5">
@@ -202,7 +202,9 @@ export default function UploadPage() {
                         <Video className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="font-semibold">ลากและปล่อยไฟล์วิดีโอได้เลย</p>
+                        <p className="font-semibold">
+                          ลากและปล่อยไฟล์วิดีโอได้เลย
+                        </p>
                         <p className="text-white/70 text-sm">
                           หรือเลือกไฟล์จากด้านล่าง
                         </p>
@@ -229,7 +231,9 @@ export default function UploadPage() {
                         className="hidden"
                       />
                       <div className="mt-3 text-xs text-white/60">
-                        <p>รองรับไฟล์ MP4, MOV สูงสุด 200MB • แนะนำอัตราส่วน 9:16</p>
+                        <p>
+                          รองรับไฟล์ MP4, MOV สูงสุด 200MB • แนะนำอัตราส่วน 9:16
+                        </p>
                       </div>
                     </div>
                   )}

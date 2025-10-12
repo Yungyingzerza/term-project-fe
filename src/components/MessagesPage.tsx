@@ -97,7 +97,9 @@ export default function MessagesPage() {
         read: true,
       },
     ],
-    c2: [{ id: "m3", author: "them", text: "จะไลฟ์ในอีก 10 นาที", time: "08:10" }],
+    c2: [
+      { id: "m3", author: "them", text: "จะไลฟ์ในอีก 10 นาที", time: "08:10" },
+    ],
     c3: [
       {
         id: "m4",
@@ -158,11 +160,11 @@ export default function MessagesPage() {
   const messages = messagesByConvo[active?.id] || [];
 
   return (
-    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overscroll-none pt-14">
       {/* Ambient overlay to match ModernTok */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
+        className="pointer-events-none fixed inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
         style={{
           backgroundColor: ambientColor,
           opacity: 0.5,
@@ -175,10 +177,14 @@ export default function MessagesPage() {
       <div className="relative z-10 flex flex-1">
         <Sidebar />
 
-        <main className="flex-1">
-          <section className="px-4 py-6 h-[calc(100vh-56px-var(--bottom-tabs-h,0px))] flex flex-col">
+        <main className="flex-1 pb-24 md:pb-6 md:ml-64">
+          <section className="max-w-7xl mx-auto px-4 py-6 h-full">
             {/* Header */}
-            <div className={`${showChatOnMobile ? "hidden lg:flex" : "flex"} items-center gap-2 mb-5 shrink-0`}>
+            <div
+              className={`${
+                showChatOnMobile ? "hidden lg:flex" : "flex"
+              } items-center gap-2 mb-5 shrink-0`}
+            >
               <div className="w-8 h-8 rounded-lg bg-white text-black grid place-items-center">
                 <MessageCircle className="w-4 h-4" />
               </div>
@@ -286,7 +292,9 @@ export default function MessagesPage() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold truncate">{active?.name}</p>
-                    <p className="text-xs text-white/70 truncate">ออนไลน์อยู่ตอนนี้</p>
+                    <p className="text-xs text-white/70 truncate">
+                      ออนไลน์อยู่ตอนนี้
+                    </p>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button className="cursor-pointer inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 border border-white/10">

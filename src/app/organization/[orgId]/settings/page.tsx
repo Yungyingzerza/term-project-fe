@@ -96,13 +96,13 @@ export default async function GroupSettingsPage(props: PageProps) {
   );
 
   return (
-    <div className="relative min-h-screen bg-neutral-950 text-white overflow-hidden md:pt-14">
+    <div className="relative min-h-screen bg-neutral-950 text-white md:pt-14">
       <div className="hidden md:block">
         <TopBar />
       </div>
       <div className="flex">
         <Sidebar />
-        <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 md:pb-8 md:ml-64">
           {/* Header */}
           <div className="mb-6">
             <Link

@@ -615,11 +615,11 @@ export default function ProfilePage({
   };
 
   return (
-    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overscroll-none pt-14">
       {/* Ambient overlay to match ModernTok */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
+        className="pointer-events-none fixed inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
         style={{
           backgroundColor: ambientColor,
           opacity: 0.5,
@@ -632,7 +632,7 @@ export default function ProfilePage({
       <div className="relative z-10 flex flex-1">
         <Sidebar />
 
-        <main ref={contentContainerRef} className="flex-1">
+        <main className="flex-1 pb-24 md:pb-6 md:ml-64">
           <section className="max-w-7xl mx-auto px-4 py-6">
             {/* Header card - simplified to match ModernTok */}
             <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5 sm:p-6">

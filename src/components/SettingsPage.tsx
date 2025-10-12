@@ -212,11 +212,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overflow-hidden overscroll-none pt-14">
+    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overscroll-none pt-14">
       {/* Ambient overlay to match ModernTok */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
+        className="pointer-events-none fixed inset-0 z-0 transition-[background-color,opacity] duration-700 ease-linear"
         style={{
           backgroundColor: ambientColor,
           opacity: 0.5,
@@ -229,7 +229,7 @@ export default function SettingsPage() {
       <div className="relative z-10 flex flex-1">
         <Sidebar />
 
-        <main className="flex-1">
+        <main className="flex-1 pb-24 md:pb-6 md:ml-64">
           <section className="max-w-7xl mx-auto px-4 py-6">
             {/* Header */}
             <div className="flex items-center gap-2 mb-5">
@@ -423,36 +423,6 @@ export default function SettingsPage() {
                     </button>
                   </div>
                 )}
-
-                {/* Privacy */}
-                <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Shield className="w-4 h-4 text-white/80" />
-                    <h2 className="font-semibold">ความเป็นส่วนตัว</h2>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 border border-white/10">
-                      <span className="text-sm">แสดงสถานะการใช้งาน</span>
-                      <button
-                        onClick={() => setShowActivity((s) => !s)}
-                        className={`cursor-pointer inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border ${
-                          showActivity
-                            ? "bg-white text-black border-white"
-                            : "bg-neutral-900/60 border-white/10"
-                        }`}
-                        aria-pressed={showActivity}
-                      >
-                        {showActivity ? (
-                          <Check className="w-4 h-4" />
-                        ) : (
-                          <X className="w-4 h-4" />
-                        )}
-                        {showActivity ? "เปิด" : "ปิด"}
-                      </button>
-                    </div>
-                    {/* Allow mentions is disabled/commented for now */}
-                  </div>
-                </div>
 
                 {/* Danger zone */}
                 <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5">

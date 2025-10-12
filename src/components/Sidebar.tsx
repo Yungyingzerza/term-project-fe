@@ -57,7 +57,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="hidden md:flex md:w-64 shrink-0 border-r border-white/10 bg-neutral-950/40 backdrop-blur-xl overflow-hidden"
+      className="hidden md:flex md:w-64 shrink-0 border-r border-white/10 bg-neutral-950/40 backdrop-blur-xl overflow-hidden md:fixed md:left-0 md:top-14 md:z-40"
       style={{
         height: "calc(100vh - 56px)",
       }}

@@ -396,7 +396,7 @@ export default function Feed({
     <main
       ref={containerRef}
       tabIndex={0}
-      className="flex-1 overflow-y-auto no-scrollbar overscroll-none [scroll-snap-type:y_mandatory] [--feed-top:0px] md:[--feed-top:56px]"
+      className="flex-1 overflow-y-auto no-scrollbar overscroll-none [scroll-snap-type:y_mandatory] [--feed-top:0px] md:[--feed-top:56px] md:ml-64"
       style={{
         height:
           "calc(var(--app-vh, 100dvh) - var(--feed-top, 56px) - var(--bottom-tabs-h, 0px))",
