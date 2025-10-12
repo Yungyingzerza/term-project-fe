@@ -52,6 +52,8 @@ export default function Feed({
     ? forcedAlgo
     : pathname?.startsWith("/following")
     ? "following"
+    : pathname?.startsWith("/friends")
+    ? "friends"
     : "for-you";
   const { items, loading, error, fetchNext, hasMore, setAlgo, algo, refetch } =
     useFeed({
@@ -136,6 +138,8 @@ export default function Feed({
       ? forcedAlgo
       : pathname?.startsWith("/following")
       ? "following"
+      : pathname?.startsWith("/friends")
+      ? "friends"
       : "for-you";
     if (nextAlgo !== algo) {
       setAlgo(nextAlgo);

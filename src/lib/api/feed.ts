@@ -1,7 +1,7 @@
 import type { PostItem } from "@/interfaces";
 import { buildApiUrl } from "./utils";
 
-export type FeedAlgo = "for-you" | "following";
+export type FeedAlgo = "for-you" | "following" | "friends";
 
 export interface FeedResponse {
   algo: FeedAlgo;
@@ -82,7 +82,13 @@ export interface RecordPostViewResponse {
   wasNewView: boolean;
 }
 
-export async function getFeed({ algo = "for-you", limit = 10, cursor, signal, cookie }: GetFeedParams = {}): Promise<FeedResponse> {
+export async function getFeed({
+  algo = "for-you",
+  limit = 10,
+  cursor,
+  signal,
+  cookie,
+}: GetFeedParams = {}): Promise<FeedResponse> {
   const url = buildApiUrl("feed");
   url.searchParams.set("algo", algo);
   if (limit != null) url.searchParams.set("limit", String(limit));
@@ -102,14 +108,22 @@ export async function getFeed({ algo = "for-you", limit = 10, cursor, signal, co
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Failed to fetch feed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`);
+    throw new Error(
+      `Failed to fetch feed: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
+    );
   }
 
   const data = (await res.json()) as FeedResponse;
   return data;
 }
 
-export async function getPostById({ postId, signal, cookie }: GetPostByIdParams): Promise<PostByIdResponse> {
+export async function getPostById({
+  postId,
+  signal,
+  cookie,
+}: GetPostByIdParams): Promise<PostByIdResponse> {
   const url = buildApiUrl(`feed/${encodeURIComponent(postId)}`);
 
   const res = await fetch(url.toString(), {
@@ -126,7 +140,9 @@ export async function getPostById({ postId, signal, cookie }: GetPostByIdParams)
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     const err = new Error(
-      `Failed to fetch post ${postId}: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`
+      `Failed to fetch post ${postId}: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
     ) as Error & { status?: number };
     err.status = res.status;
     throw err;
@@ -136,7 +152,13 @@ export async function getPostById({ postId, signal, cookie }: GetPostByIdParams)
   return data;
 }
 
-export async function getFeedByUserHandle({ handle, limit = 10, cursor, signal, cookie }: GetUserFeedParams): Promise<UserFeedResponse> {
+export async function getFeedByUserHandle({
+  handle,
+  limit = 10,
+  cursor,
+  signal,
+  cookie,
+}: GetUserFeedParams): Promise<UserFeedResponse> {
   const url = buildApiUrl(`feed/user/handle/${encodeURIComponent(handle)}`);
   if (limit != null) url.searchParams.set("limit", String(limit));
   if (cursor) url.searchParams.set("cursor", cursor);
@@ -155,7 +177,9 @@ export async function getFeedByUserHandle({ handle, limit = 10, cursor, signal, 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(
-      `Failed to fetch user feed by handle: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`
+      `Failed to fetch user feed by handle: ${res.status} ${res.statusText}${
+        text ? ` - ${text}` : ""
+      }`
     );
   }
 
@@ -188,7 +212,9 @@ export async function getFeedByOrganizationId({
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(
-      `Failed to fetch organization feed ${orgId}: ${res.status} ${res.statusText}${text ? ` - ${text}` : ""}`
+      `Failed to fetch organization feed ${orgId}: ${res.status} ${
+        res.statusText
+      }${text ? ` - ${text}` : ""}`
     );
   }
 
@@ -220,9 +246,9 @@ export async function recordPostView({
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(
-      `Failed to record view for post ${postId}: ${res.status} ${res.statusText}${
-        text ? ` - ${text}` : ""
-      }`
+      `Failed to record view for post ${postId}: ${res.status} ${
+        res.statusText
+      }${text ? ` - ${text}` : ""}`
     );
   }
 

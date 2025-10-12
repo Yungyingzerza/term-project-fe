@@ -7,6 +7,7 @@ import {
   User,
   MessageCircle,
   CheckCircle,
+  UserPlus,
 } from "lucide-react";
 import Image from "next/image";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -33,6 +34,7 @@ export default function Sidebar() {
   const itemsBase = [
     { icon: Home, label: "เพื่อคุณ", link: "/" },
     { icon: Users, label: "กำลังติดตาม", link: "/following" },
+    { icon: UserPlus, label: "เพื่อน", link: "/friends" },
     { icon: Compass, label: "สำรวจ", link: "/explore" },
     { icon: MessageCircle, label: "ข้อความ", link: "/messages" },
     {
@@ -44,7 +46,8 @@ export default function Sidebar() {
   const items = isLoggedIn
     ? itemsBase
     : itemsBase.filter(
-        (i) => !["กำลังติดตาม", "ข้อความ", "โปรไฟล์"].includes(i.label)
+        (i) =>
+          !["กำลังติดตาม", "เพื่อน", "ข้อความ", "โปรไฟล์"].includes(i.label)
       );
   //handle navigation
   const handleNavigation = (link: string) => {
@@ -90,7 +93,7 @@ export default function Sidebar() {
         {isLoggedIn ? (
           <div className="mt-6 flex-1 min-h-0 flex flex-col">
             <div className="flex items-center justify-between px-3 mb-2 shrink-0">
-              <p className="text-xs text-white/60">องค์กรของคุณ</p>
+              <p className="text-xs text-white/60">องค์กร/กลุ่มของคุณ</p>
               <button
                 onClick={() => handleNavigation("/groups")}
                 className="text-xs text-blue-400 hover:text-blue-300 transition"

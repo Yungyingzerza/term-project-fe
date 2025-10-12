@@ -137,6 +137,7 @@ export default function BottomTabs() {
         // Only show "Following" option if user is logged in
         if (isLoggedIn) {
           items.push({ label: "กำลังติดตาม", link: "/following" });
+          items.push({ label: "เพื่อน", link: "/friends" });
         }
       } else if (tabLabel === "โปรไฟล์") {
         items = [
@@ -337,6 +338,7 @@ export default function BottomTabs() {
               link === "/"
                 ? pathname === "/" ||
                   pathname.startsWith("/following") ||
+                  pathname.startsWith("/friends") ||
                   pathname.startsWith("/live")
                 : pathname === link || pathname.startsWith(link + "/");
 

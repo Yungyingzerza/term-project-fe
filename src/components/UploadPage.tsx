@@ -245,13 +245,13 @@ export default function UploadPage() {
                     {/* Post in organizations */}
                     <div>
                       <label className="block text-sm text-white/80 mb-2">
-                        โพสต์ในองค์กร
+                        โพสต์ในองค์กร/กลุ่ม
                       </label>
                       <div className="group relative mb-2">
                         <input
                           value={postOrgQuery}
                           onChange={(e) => setPostOrgQuery(e.target.value)}
-                          placeholder="ค้นหาองค์กร"
+                          placeholder="ค้นหาองค์กร/กลุ่ม"
                           className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-3 py-2 outline-none focus:border-white/20"
                         />
                         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
@@ -296,14 +296,15 @@ export default function UploadPage() {
                         {filteredPostChoices.length === 0 && (
                           <div className="text-sm text-white/60 px-1.5 py-1">
                             {organizationsStatus === "loading"
-                              ? "กำลังโหลดองค์กร..."
-                              : "ไม่พบองค์กร"}
+                              ? "กำลังโหลดองค์กร/กลุ่ม..."
+                              : "ไม่พบองค์กร/กลุ่ม"}
                           </div>
                         )}
                       </div>
                       {postOrgs.length === 0 && (
                         <p className="mt-1 text-xs text-white/60">
-                          ตัวเลือก: เลือกหนึ่งหรือหลายองค์กรเพื่อแชร์โพสต์นี้
+                          ตัวเลือก:
+                          เลือกหนึ่งหรือหลายองค์กร/กลุ่มเพื่อแชร์โพสต์นี้
                         </p>
                       )}
                     </div>
