@@ -6,6 +6,10 @@ import ClientProvider from "./ClientProvider";
 export const metadata: Metadata = {
   title: "ชิวชิว - ChillChill",
   description: "Share and enjoy videos with friends",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default async function RootLayout({
