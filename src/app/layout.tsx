@@ -43,8 +43,8 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang="en">
-      <body className={` antialiased`}>
+    <html lang="en" className="overflow-x-hidden">
+      <body className="antialiased overflow-x-hidden">
         <ClientProvider
           id={user?.id}
           username={user?.username}

@@ -437,13 +437,13 @@ export default function ProfilePage({
     }
     return (
       <>
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 w-full">
           {gridItems.map((p) => (
             <Link
               key={p.id}
               href={`/feed/${p.id}`}
               prefetch={false}
-              className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 focus:outline-none focus:ring-2 focus:ring-white/20"
+              className="group relative rounded-xl overflow-hidden border border-white/10 bg-neutral-900/60 focus:outline-none focus:ring-2 focus:ring-white/20 w-full"
               aria-label={`เปิดวิดีโอ ${p.id} มียอดรับชม ${formatCount(
                 p.views
               )} ครั้ง`}
@@ -506,7 +506,7 @@ export default function ProfilePage({
     }
     return (
       <>
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
           {reactedItems.map((item) => (
             <MiniHorizontalCard
               key={item.reactionId}
@@ -551,7 +551,7 @@ export default function ProfilePage({
     }
     return (
       <>
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
           {savedItems.map((item) => (
             <MiniHorizontalCard
               key={item.postId}
@@ -593,7 +593,7 @@ export default function ProfilePage({
     }
     return (
       <>
-        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full">
           {historyItems.map((item) => (
             <MiniHorizontalCard
               key={item.viewId}
@@ -639,7 +639,7 @@ export default function ProfilePage({
   };
 
   return (
-    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overscroll-none pt-14">
+    <div className="flex flex-col relative min-h-screen bg-neutral-950 text-white selection:bg-white selection:text-black overscroll-none pt-14 overflow-x-hidden">
       {/* Ambient overlay to match ModernTok */}
       <div
         aria-hidden
@@ -653,68 +653,68 @@ export default function ProfilePage({
 
       <TopBar />
 
-      <div className="relative z-10 flex flex-1">
+      <div className="relative z-10 flex flex-1 overflow-x-hidden">
         <Sidebar />
 
-        <main className="flex-1 pb-24 md:pb-6 md:ml-64">
-          <section className="max-w-7xl mx-auto px-4 py-6">
+        <main className="flex-1 pb-24 md:pb-6 md:ml-64 w-full overflow-x-hidden">
+          <section className="max-w-7xl mx-auto px-3 sm:px-4 py-6 w-full">
             {/* Header card - simplified to match ModernTok */}
-            <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-5 sm:p-6">
-              <div className="flex items-start gap-4">
+            <div className="rounded-2xl border border-white/10 bg-neutral-900/60 backdrop-blur-sm p-4 sm:p-6 w-full overflow-hidden">
+              <div className="flex flex-col sm:flex-row items-start gap-4 w-full">
                 <Image
                   src={avatar}
                   alt={`ภาพโปรไฟล์ของ ${displayName}`}
                   width={96}
                   height={96}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/10 object-cover"
+                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border border-white/10 object-cover flex-shrink-0"
                   unoptimized
                 />
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-extrabold leading-tight truncate">
+                <div className="flex-1 min-w-0 w-full">
+                  <h1 className="text-xl sm:text-2xl font-extrabold leading-tight break-words">
                     {displayName}
                   </h1>
-                  <p className="text-white/70 text-sm sm:text-base">
+                  <p className="text-white/70 text-sm sm:text-base break-all">
                     @{normalizedHandle}
                   </p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-white/80">
-                    <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5" />{" "}
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-white/80">
+                    <span className="px-2 sm:px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <Users className="w-3 sm:w-3.5 h-3 sm:h-3.5" />{" "}
                       {formatCount(followerCount)} ผู้ติดตาม
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5">
-                      <UserPlus className="w-3.5 h-3.5" />{" "}
+                    <span className="px-2 sm:px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <UserPlus className="w-3 sm:w-3.5 h-3 sm:h-3.5" />{" "}
                       {formatCount(followingCount)} กำลังติดตาม
                     </span>
-                    <span className="px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5">
-                      <Clapperboard className="w-3.5 h-3.5" />{" "}
+                    <span className="px-2 sm:px-3 py-1 rounded-full bg-white/10 border border-white/10 inline-flex items-center gap-1.5 whitespace-nowrap">
+                      <Clapperboard className="w-3 sm:w-3.5 h-3 sm:h-3.5" />{" "}
                       {formatCount(postCount)} โพสต์
                     </span>
                   </div>
                   {profileUser?.website ? (
-                    <div className="mt-2 flex items-center gap-2 text-xs text-white/70">
-                      <Link2 className="w-3.5 h-3.5" />
+                    <div className="mt-2 flex items-center gap-2 text-xs text-white/70 overflow-hidden">
+                      <Link2 className="w-3.5 h-3.5 flex-shrink-0" />
                       <a
                         href={profileUser.website}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline decoration-white/30 underline-offset-4 hover:text-white"
+                        className="underline decoration-white/30 underline-offset-4 hover:text-white truncate"
                       >
                         {profileUser.website.replace(/^https?:\/\//, "")}
                       </a>
                     </div>
                   ) : null}
                   {profileUser?.bio ? (
-                    <p className="mt-2 text-sm text-white/70 leading-snug max-w-xl whitespace-pre-line">
+                    <p className="mt-2 text-sm text-white/70 leading-snug max-w-xl whitespace-pre-line break-words">
                       {profileUser.bio}
                     </p>
                   ) : null}
                 </div>
                 {!isSelfProfile ? (
-                  <div className="hidden sm:flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
                     <button
                       disabled={messageBusy || !profileUserId}
                       onClick={handleStartConversation}
-                      className={`px-3 py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 transition bg-white/10 border border-white/10 hover:bg-white/15 ${
+                      className={`px-3 py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 transition bg-white/10 border border-white/10 hover:bg-white/15 text-sm whitespace-nowrap ${
                         messageBusy
                           ? "opacity-70 cursor-not-allowed"
                           : "cursor-pointer"
@@ -730,7 +730,7 @@ export default function ProfilePage({
                     <button
                       disabled={followBusy || !profileUser?._id}
                       onClick={handleFollowClick}
-                      className={`px-3 py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 transition ${
+                      className={`px-3 py-2 rounded-xl font-semibold inline-flex items-center gap-1.5 transition text-sm whitespace-nowrap ${
                         isFollowing
                           ? "bg-white/10 border border-white/10 text-white hover:bg-white/15"
                           : "bg-white text-black hover:opacity-90"
@@ -743,52 +743,52 @@ export default function ProfilePage({
                       <UserPlus className="w-4 h-4" />{" "}
                       {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
                     </button>
-                    <button className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5">
+                    <button className="cursor-pointer px-3 py-2 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 inline-flex items-center gap-1.5 text-sm whitespace-nowrap">
                       <Share2 className="w-4 h-4" /> แชร์
                     </button>
                   </div>
                 ) : null}
-                {!isSelfProfile ? (
-                  <div className="mt-4 flex w-full gap-2 sm:hidden">
-                    <button
-                      disabled={followBusy || !profileUser?._id}
-                      onClick={handleFollowClick}
-                      className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-                        isFollowing
-                          ? "bg-white/10 border border-white/10 text-white hover:bg-white/15"
-                          : "bg-white text-black hover:opacity-90"
-                      } ${
-                        followBusy
-                          ? "opacity-70 cursor-not-allowed"
-                          : "cursor-pointer"
-                      }`}
-                    >
-                      {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
-                    </button>
-                    <button
-                      disabled={messageBusy || !profileUserId}
-                      onClick={handleStartConversation}
-                      className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold bg-white/10 border border-white/10 text-white/90 transition ${
-                        messageBusy
-                          ? "opacity-70 cursor-not-allowed"
-                          : "cursor-pointer hover:bg-white/15"
-                      }`}
-                    >
-                      <span className="inline-flex items-center gap-1.5 justify-center">
-                        {messageBusy ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <MessageCircle className="w-4 h-4" />
-                        )}
-                        ส่งข้อความ
-                      </span>
-                    </button>
-                    <button className="rounded-xl px-3 py-2 text-sm font-medium bg-white/10 border border-white/10 text-white/90 hover:bg-white/15">
-                      แชร์
-                    </button>
-                  </div>
-                ) : null}
               </div>
+              {!isSelfProfile ? (
+                <div className="mt-4 flex w-full gap-2 sm:hidden">
+                  <button
+                    disabled={followBusy || !profileUser?._id}
+                    onClick={handleFollowClick}
+                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold transition whitespace-nowrap ${
+                      isFollowing
+                        ? "bg-white/10 border border-white/10 text-white hover:bg-white/15"
+                        : "bg-white text-black hover:opacity-90"
+                    } ${
+                      followBusy
+                        ? "opacity-70 cursor-not-allowed"
+                        : "cursor-pointer"
+                    }`}
+                  >
+                    {isFollowing ? "กำลังติดตาม" : "ติดตาม"}
+                  </button>
+                  <button
+                    disabled={messageBusy || !profileUserId}
+                    onClick={handleStartConversation}
+                    className={`flex-1 rounded-xl px-3 py-2 text-sm font-semibold bg-white/10 border border-white/10 text-white/90 transition ${
+                      messageBusy
+                        ? "opacity-70 cursor-not-allowed"
+                        : "cursor-pointer hover:bg-white/15"
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-1.5 justify-center">
+                      {messageBusy ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <MessageCircle className="w-4 h-4" />
+                      )}
+                      ส่งข้อความ
+                    </span>
+                  </button>
+                  <button className="rounded-xl px-3 py-2 text-sm font-medium bg-white/10 border border-white/10 text-white/90 hover:bg-white/15 whitespace-nowrap">
+                    แชร์
+                  </button>
+                </div>
+              ) : null}
               {followError ? (
                 <p className="mt-3 text-xs text-rose-400">{followError}</p>
               ) : null}
@@ -848,19 +848,21 @@ function MiniHorizontalCard({
     <Link
       href={href}
       prefetch={false}
-      className="flex items-center gap-3 rounded-xl border border-white/10 bg-neutral-900/70 p-3 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20"
+      className="flex items-center gap-3 rounded-xl border border-white/10 bg-neutral-900/70 p-3 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/20 w-full overflow-hidden"
     >
       <Image
         src={thumb || "https://via.placeholder.com/80x120?text=No+Image"}
         alt={title}
         width={80}
         height={120}
-        className="h-20 w-16 rounded-lg object-cover"
+        className="h-20 w-16 rounded-lg object-cover flex-shrink-0"
         unoptimized
       />
-      <div className="min-w-0">
-        <p className="text-sm font-semibold line-clamp-2">{title}</p>
-        <p className="mt-1 text-xs text-white/60">{meta}</p>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <p className="text-sm font-semibold line-clamp-2 break-words">
+          {title}
+        </p>
+        <p className="mt-1 text-xs text-white/60 truncate">{meta}</p>
       </div>
     </Link>
   );

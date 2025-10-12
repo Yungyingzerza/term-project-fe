@@ -6,6 +6,17 @@
     BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* Prevent horizontal overflow globally */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 /* Local keyframes for the reaction burst so we don't rely on Tailwind's built-in ping */
 @keyframes burst {
   0% {
