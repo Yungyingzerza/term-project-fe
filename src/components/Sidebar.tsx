@@ -85,9 +85,16 @@ export default function Sidebar() {
         </nav>
         {isLoggedIn ? (
           <div className="mt-6">
-            <p className="text-xs text-white/60 px-3 mb-2">
-              องค์กรของคุณ
-            </p>
+            <div className="flex items-center justify-between px-3 mb-2">
+              <p className="text-xs text-white/60">องค์กรของคุณ</p>
+              <button
+                onClick={() => handleNavigation("/groups")}
+                className="text-xs text-blue-400 hover:text-blue-300 transition"
+                title="จัดการกลุ่ม"
+              >
+                + สร้าง
+              </button>
+            </div>
             {orgStatus === "loading" ? (
               <div className="text-sm text-white/60 px-3 py-2">
                 กำลังโหลดองค์กร...
@@ -130,8 +137,14 @@ export default function Sidebar() {
                 );
               })
             ) : (
-              <div className="text-sm text-white/60 px-3 py-2">
-                ยังไม่มีองค์กร
+              <div className="px-3 py-2 space-y-2">
+                <p className="text-sm text-white/60">ยังไม่มีองค์กร</p>
+                <button
+                  onClick={() => handleNavigation("/groups")}
+                  className="w-full text-left text-sm text-blue-400 hover:text-blue-300 transition"
+                >
+                  สร้างหรือเข้าร่วมกลุ่ม →
+                </button>
               </div>
             )}
           </div>

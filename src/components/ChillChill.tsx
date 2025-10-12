@@ -3,6 +3,7 @@ import BottomTabs from "./BottomTabs";
 import Feed from "./Feed";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
+import { GroupsFloatingButton } from "./GroupsFloatingButton";
 import { useAppSelector } from "@/store/hooks";
 import type { FeedAlgo } from "@/hooks/useFeed";
 import type { PostItem } from "@/interfaces";
@@ -55,6 +56,8 @@ export default function ChillChill({
       <div className="relative z-10">
         <BottomTabs />
       </div>
+      {/* Floating Groups Button for Mobile */}
+      <GroupsFloatingButton />
     </div>
   );
 }

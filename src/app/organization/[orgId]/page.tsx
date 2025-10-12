@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import ChillChill from "@/components/ChillChill";
 import type { PostItem } from "@/interfaces";
 import { getFeedByOrganizationId } from "@/lib/api/feed";
+import { getOrganizationDetail } from "@/lib/api/organization";
 
 interface PageProps {
   params: Promise<{ orgId: string }>;
@@ -23,6 +24,15 @@ export default async function OrganizationFeedPage(props: PageProps) {
   let items: PostItem[] = [];
   let hasMore = true;
   let nextCursor: string | null = null;
+  let organization = null;
+
+  try {
+    organization = await getOrganizationDetail(orgId, {
+      cookie: token ? `accessToken=${token}` : undefined,
+    });
+  } catch {
+    // Organization not found or error
+  }
 
   try {
     const data = await getFeedByOrganizationId({
