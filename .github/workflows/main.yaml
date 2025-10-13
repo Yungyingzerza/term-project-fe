@@ -11,7 +11,7 @@ jobs:
 
     env:
       IMAGE_NAME: localhost:5000/chillchill-frontend:latest
-      BUILD_DIR: ./chillchill-fe
+      BUILD_DIR: .
 
     steps:
       - name: Checkout Code
