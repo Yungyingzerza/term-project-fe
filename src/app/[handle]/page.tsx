@@ -95,6 +95,7 @@ export default async function HandleProfilePage(props: PageProps) {
       limit: 12,
       cursor: cursor ?? null,
       cookie: token ? `accessToken=${token}` : undefined,
+      isInternal: true,
     });
     items = (data?.items as PostItem[]) || [];
     videoPaging = data?.paging;

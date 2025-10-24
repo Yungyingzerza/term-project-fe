@@ -55,6 +55,7 @@ export interface GetUserFeedParams {
   signal?: AbortSignal;
   /** Optional cookie string for SSR (e.g., `accessToken=...; refreshToken=...`). */
   cookie?: string;
+  isInternal?: boolean;
 }
 
 export interface GetOrganizationFeedParams {
@@ -158,8 +159,14 @@ export async function getFeedByUserHandle({
   cursor,
   signal,
   cookie,
+  isInternal = false,
 }: GetUserFeedParams): Promise<UserFeedResponse> {
-  const url = buildApiUrl(`feed/user/handle/${encodeURIComponent(handle)}`);
+  const url = buildApiUrl(
+    `feed/user/handle/${encodeURIComponent(handle)}`,
+    isInternal
+      ? process.env.NEXT_PUBLIC_API_BASE_INTERNAL
+      : process.env.NEXT_PUBLIC_BASE_API
+  );
   if (limit != null) url.searchParams.set("limit", String(limit));
   if (cursor) url.searchParams.set("cursor", cursor);
 

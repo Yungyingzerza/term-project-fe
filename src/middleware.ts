@@ -59,6 +59,9 @@ const deleteAuthCookie = (response: NextResponse, name: string) => {
 };
 
 export async function middleware(req: NextRequest) {
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_BASE_INTERNAL ||
+    process.env.NEXT_PUBLIC_BASE_API;
   let isAuth = false;
   const accessToken = req.cookies.get("accessToken")?.value;
   const refreshToken = req.cookies.get("refreshToken")?.value;
@@ -82,16 +85,13 @@ export async function middleware(req: NextRequest) {
     return response;
   } else if (refreshToken && !accessToken) {
     // try to get new access token calling API
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_API}/line/refresh`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: `refreshToken=${refreshToken}`,
-        },
-      }
-    );
+    const res = await fetch(`${apiBase}/line/refresh`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `refreshToken=${refreshToken}`,
+      },
+    });
 
     if (res.ok) {
       isAuth = true;
@@ -128,16 +128,13 @@ export async function middleware(req: NextRequest) {
     } catch {
       // accessToken invalid/expired; try refreshing with refreshToken
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_API}/line/refresh`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              Cookie: `refreshToken=${refreshToken}`,
-            },
-          }
-        );
+        const res = await fetch(`${apiBase}/line/refresh`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Cookie: `refreshToken=${refreshToken}`,
+          },
+        });
 
         if (res.ok) {
           isAuth = true;
@@ -180,7 +177,7 @@ export async function middleware(req: NextRequest) {
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
 
-  if (isProtected && !isAuth) {
+  if (isProtected && !isAuth && !accessToken && !refreshToken) {
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_BASE_API}/line/authentication`
     );

@@ -20,19 +20,20 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const token = cookieStore.get("accessToken")?.value;
 
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_BASE_INTERNAL ||
+    process.env.NEXT_PUBLIC_BASE_API;
+
   let user = null;
   if (token) {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BASE_API}/line/me`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Cookie: token ? `accessToken=${token}` : "",
-          },
-        }
-      );
+      const response = await fetch(`${apiBase as string}/line/me`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: token ? `accessToken=${token}` : "",
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         user = data;
